@@ -1,0 +1,46 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Backend (.NET)
+**/bin/
+**/obj/
+**/out/
+*.dll
+*.pdb
+*.cache
+*.exe
+*.log
+TestResults/
+*.DotSettings.user
+
+# Secrets — giữ local, không push mật khẩu / JWT thật
+**/appsettings.json
+**/appsettings.*.local.json
+.env
+.env.*
+!.env.example
+
+# Frontend (Node / Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# Logs / temp
+logs/
+*.log
+tmp/
+temp/
+.cursor/
