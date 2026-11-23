@@ -66,7 +66,8 @@ public class CustomersController : AdminApiController
     // Nhận IFormFile → lưu MediaAssets → URL /api/v1/media/{id} (mọi môi trường xem được)
     [HttpPost("{id:int}/avatar")]
     [RequestSizeLimit(2 * 1024 * 1024)]
-    public async Task<IActionResult> UploadAvatar(int id, [FromForm] IFormFile? file)
+    // Không gắn [FromForm] trên IFormFile — Swagger/Swashbuckle sẽ lỗi generate
+    public async Task<IActionResult> UploadAvatar(int id, IFormFile? file)
     {
         FormFileHelper.EnsureValidImage(file);
         await using var stream = file!.OpenReadStream();

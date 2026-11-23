@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace WarehouseManagement.Shared;
@@ -8,9 +9,13 @@ public class PaginationQuery
     [StringLength(100, ErrorMessage = "Từ khóa tìm kiếm tối đa 100 ký tự.")]
     public string? Search { get; set; }
 
+    /// <summary>Mặc định 1 — bỏ trống trên Swagger vẫn chạy.</summary>
+    [DefaultValue(1)]
     [Range(1, int.MaxValue, ErrorMessage = "pageNumber phải >= 1.")]
     public int PageNumber { get; set; } = 1;
 
+    /// <summary>Mặc định 10 — bỏ trống trên Swagger vẫn chạy.</summary>
+    [DefaultValue(10)]
     [Range(1, 500, ErrorMessage = "pageSize phải từ 1 đến 500.")]
     public int PageSize { get; set; } = 10;
 }

@@ -7,11 +7,12 @@ using WarehouseManagement.Shared;
 namespace WarehouseManagement.Infrastructure.Persistence;
 
 /// <summary>
-/// Seed role/user đăng nhập + ~100 bản ghi mẫu thực tế cho các bảng nghiệp vụ.
+/// Seed role/user đăng nhập + dữ liệu demo nghiệp vụ.
+/// Mỗi bảng nghiệp vụ: <see cref="Target"/> bản ghi (mặc định 500) để test phân trang / filter.
 /// </summary>
 public static class DataSeeder
 {
-    private const int Target = 100; // Số bản ghi mục tiêu mỗi bảng demo
+    private const int Target = 500; // Số bản ghi mục tiêu mỗi bảng demo
     private const string DemoPassword = "123456"; // Mật khẩu demo cho mọi user seed
 
     // ----- Dữ liệu mẫu tên/địa chỉ/danh mục (dùng quay vòng khi sinh bản ghi) -----
@@ -62,7 +63,11 @@ public static class DataSeeder
         "Mì gói", "Phở khô", "Sữa tươi", "Sữa đặc", "Cà phê rang xay", "Trà xanh",
         "Nước suối", "Nước ngọt", "Bia lon", "Khăn giấy", "Nước rửa chén", "Nước giặt",
         "Bột giặt", "Xà phòng", "Dầu gội", "Sữa tắm", "Kem đánh răng", "Bàn chải",
-        "Pin AA", "Bóng đèn LED", "Ổ cắm điện", "Băng keo", "Thùng carton", "Màng PE"
+        "Pin AA", "Bóng đèn LED", "Ổ cắm điện", "Băng keo", "Thùng carton", "Màng PE",
+        "Bánh quy", "Kẹo mềm", "Snack khoai", "Hạt điều", "Nho khô", "Tương ớt",
+        "Tương cà", "Mayonnaise", "Dầu oliu", "Bơ thực vật", "Phô mai", "Yaourt",
+        "Thịt heo đông lạnh", "Thịt gà đông lạnh", "Cá basa", "Tôm sú", "Rau củ hỗn hợp",
+        "Nấm đông cô", "Đậu hũ", "Trứng gà", "Mật ong", "Yến mạch"
     ];
 
     /// <summary>
@@ -77,32 +82,158 @@ public static class DataSeeder
         await db.Database.MigrateAsync(); // Áp dụng migration chưa chạy
         await SeedRolesAndLoginUsersAsync(db);
         await SeedDemoDataAsync(db);
-        await EnsureProductImageFilesAsync(db, env.ContentRootPath);
+        // Top-up Products → Target (idempotent) + ảnh hiển thị được trên UI
+        await EnsureDemoProductsAsync(db);
+        await EnsureProductImagesReadyAsync(db, env.ContentRootPath);
     }
 
     /// <summary>
-    /// Tạo file placeholder cho mọi ImageUrl đang thiếu trên đĩa
-    /// (tránh 404 / ảnh vỡ trên UI admin & store).
+    /// Đảm bảo có đủ <see cref="Target"/> sản phẩm demo (idempotent theo SKU SP0001…SP0500).
     /// </summary>
-    private static async Task EnsureProductImageFilesAsync(ApplicationDbContext db, string contentRoot)
+    private static async Task EnsureDemoProductsAsync(ApplicationDbContext db)
+    {
+        var categories = await db.Categories.OrderBy(x => x.Id).ToListAsync();
+        var units = await db.Units.OrderBy(x => x.Id).ToListAsync();
+        if (categories.Count == 0 || units.Count == 0)
+            return; // Chưa có danh mục/đơn vị — chờ SeedDemoDataAsync tạo trước
+
+        if (await db.Products.CountAsync() >= Target)
+            return;
+
+        var existingSkus = (await db.Products.AsNoTracking().Select(x => x.Sku).ToListAsync())
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var products = new List<Product>();
+        for (var i = 1; i <= Target; i++)
+        {
+            var sku = $"SP{i:D4}";
+            if (existingSkus.Contains(sku))
+                continue;
+
+            var baseName = ProductBases[(i - 1) % ProductBases.Length];
+            var batch = (i - 1) / ProductBases.Length;
+            var name = batch == 0 ? baseName : $"{baseName} lo {batch + 1}";
+
+            products.Add(new Product
+            {
+                Sku = sku,
+                Name = name,
+                Description = $"{name} - hang demo tieu dung (SKU {sku})",
+                Price = 5000 + (i * 137) % 500000,
+                MinStock = 5 + (i % 20),
+                CategoryId = categories[(i - 1) % categories.Count].Id,
+                UnitId = units[(i - 1) % units.Count].Id,
+                IsActive = i % 21 != 0
+            });
+        }
+
+        if (products.Count == 0)
+            return;
+
+        db.Products.AddRange(products);
+        await db.SaveChangesAsync();
+
+        var newSkus = products.Select(x => x.Sku).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var savedNew = await db.Products
+            .Where(x => newSkus.Contains(x.Sku))
+            .OrderBy(x => x.Id)
+            .ToListAsync();
+
+        var images = new List<ProductImage>();
+        foreach (var p in savedNew)
+        {
+            var n = int.TryParse(p.Sku.AsSpan(2), out var num) ? num : 9999;
+            images.Add(new ProductImage
+            {
+                ProductId = p.Id,
+                ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-1.png",
+                SortOrder = 0,
+                IsPrimary = true
+            });
+
+            if (n <= 50)
+            {
+                images.Add(new ProductImage
+                {
+                    ProductId = p.Id,
+                    ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-2.png",
+                    SortOrder = 1,
+                    IsPrimary = false
+                });
+            }
+        }
+
+        db.ProductImages.AddRange(images);
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Đảm bảo mọi Product có ≥1 ảnh primary trong DB và file trên đĩa là PNG demo nhìn thấy được
+    /// (thay placeholder 1×1 trước đây khiến UI hiện ô trống / vỡ ảnh).
+    /// Template: wwwroot/uploads/products/templates/pack-00.png … pack-23.png
+    /// </summary>
+    private static async Task EnsureProductImagesReadyAsync(ApplicationDbContext db, string contentRoot)
     {
         var webRoot = Path.Combine(contentRoot, "wwwroot");
         var productDir = Path.Combine(webRoot, "uploads", "products");
+        var templateDir = Path.Combine(productDir, "templates");
         Directory.CreateDirectory(productDir);
+        Directory.CreateDirectory(templateDir);
 
+        var templates = Directory.Exists(templateDir)
+            ? Directory.GetFiles(templateDir, "pack-*.png").OrderBy(x => x, StringComparer.Ordinal).ToArray()
+            : [];
+
+        // ----- 1) DB: mọi sản phẩm có ít nhất 1 ảnh primary -----
+        var products = await db.Products
+            .Include(x => x.Images)
+            .OrderBy(x => x.Id)
+            .ToListAsync();
+
+        var dbChanged = false;
+        foreach (var p in products)
+        {
+            if (p.Images.Count == 0)
+            {
+                p.Images.Add(new ProductImage
+                {
+                    ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-1.png",
+                    SortOrder = 0,
+                    IsPrimary = true
+                });
+                dbChanged = true;
+                continue;
+            }
+
+            if (!p.Images.Any(x => x.IsPrimary))
+            {
+                p.Images.OrderBy(x => x.SortOrder).ThenBy(x => x.Id).First().IsPrimary = true;
+                dbChanged = true;
+            }
+        }
+
+        if (dbChanged)
+            await db.SaveChangesAsync();
+
+        // ----- 2) Đĩa: tạo/ghi đè file ảnh demo (thiếu hoặc chỉ còn PNG 1×1) -----
         var urls = await db.ProductImages
             .AsNoTracking()
             .Select(x => x.ImageUrl)
             .Distinct()
             .ToListAsync();
 
-        // PNG 1x1 xám hợp lệ
-        var placeholder = Convert.FromBase64String(
+        // Fallback PNG nhỏ nếu thiếu template (hiếm)
+        var tinyFallback = Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
-        foreach (var url in urls)
+        for (var i = 0; i < urls.Count; i++)
         {
+            var url = urls[i];
             if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            // Không đụng template gốc
+            if (url.Contains("/templates/", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var fullPath = Path.Combine(
@@ -113,8 +244,19 @@ public static class DataSeeder
             if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
 
-            if (!File.Exists(fullPath))
-                await File.WriteAllBytesAsync(fullPath, placeholder);
+            var missingOrTiny = !File.Exists(fullPath) || new FileInfo(fullPath).Length < 500;
+            if (!missingOrTiny)
+                continue;
+
+            if (templates.Length > 0)
+            {
+                var idx = Math.Abs(HashCode.Combine(url.ToLowerInvariant())) % templates.Length;
+                File.Copy(templates[idx], fullPath, overwrite: true);
+            }
+            else
+            {
+                await File.WriteAllBytesAsync(fullPath, tinyFallback);
+            }
         }
     }
 
@@ -172,18 +314,14 @@ public static class DataSeeder
     }
 
     // -------------------------------------------------------------------------
-    // ~100 bản ghi / bảng nghiệp vụ (chỉ chạy 1 lần — mốc PN-SEED-0100)
+    // Target bản ghi / bảng nghiệp vụ — idempotent top-up (có thể chạy lại)
     // -------------------------------------------------------------------------
     /// <summary>
-    /// Sinh dữ liệu demo Categories → Units → Warehouses → Suppliers → Users →
+    /// dữ liệu demo Categories → Units → Warehouses → Suppliers → Users →
     /// Customers → Products → Stocks → Import/Export/Stocktake + StockTransactions.
     /// </summary>
     private static async Task SeedDemoDataAsync(ApplicationDbContext db)
     {
-        // Đã seed đủ bộ demo (dùng mã phiếu nhập cuối làm mốc)
-        if (await db.ImportReceipts.AnyAsync(x => x.Code == "PN-SEED-0100"))
-            return;
-
         var adminRole = await db.Roles.FirstAsync(x => x.Name == AppRoles.Admin);
         var managerRole = await db.Roles.FirstAsync(x => x.Name == AppRoles.Manager);
         var staffRole = await db.Roles.FirstAsync(x => x.Name == AppRoles.Staff);
@@ -192,19 +330,16 @@ public static class DataSeeder
         // ----- Categories -----
         if (await db.Categories.CountAsync() < Target)
         {
-            var existing = await db.Categories.Select(x => x.Name).ToListAsync();
-            var set = existing.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var set = (await db.Categories.Select(x => x.Name).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var need = Target - set.Count;
             var list = new List<Category>();
-
-            for (var i = 1; i <= Target; i++)
+            for (var i = 1; list.Count < need && i < 100_000; i++)
             {
                 var baseName = CategoryNames[(i - 1) % CategoryNames.Length];
-                var name = i <= CategoryNames.Length
-                    ? baseName
-                    : $"{baseName} nhóm {(i - 1) / CategoryNames.Length + 1}";
-
+                var name = $"DM {baseName} {i:D4}";
                 if (!set.Add(name))
-                    name = $"{baseName} #{i:D3}";
+                    continue;
 
                 list.Add(new Category
                 {
@@ -214,8 +349,11 @@ public static class DataSeeder
                 });
             }
 
-            db.Categories.AddRange(list);
-            await db.SaveChangesAsync();
+            if (list.Count > 0)
+            {
+                db.Categories.AddRange(list);
+                await db.SaveChangesAsync();
+            }
         }
 
         // ----- Units -----
@@ -232,89 +370,121 @@ public static class DataSeeder
                 ("Thùng 24", "th24"), ("Lốc 6", "loc6"), ("Lốc 10", "loc10")
             };
 
+            var symbolSet = (await db.Units.Select(x => x.Symbol).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var nameSet = (await db.Units.Select(x => x.Name).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var need = Target - Math.Min(symbolSet.Count, nameSet.Count);
+            // Count thật từ DB
+            need = Target - await db.Units.CountAsync();
             var list = new List<Unit>();
-            for (var i = 1; i <= Target; i++)
+
+            for (var i = 1; list.Count < need && i < 100_000; i++)
             {
+                string name;
+                string symbol;
                 if (i <= unitDefs.Length)
                 {
-                    list.Add(new Unit
-                    {
-                        Name = unitDefs[i - 1].Name,
-                        Symbol = unitDefs[i - 1].Symbol,
-                        Description = $"Đơn vị {unitDefs[i - 1].Name}",
-                        IsActive = true
-                    });
+                    name = unitDefs[i - 1].Name;
+                    symbol = unitDefs[i - 1].Symbol;
                 }
                 else
                 {
-                    list.Add(new Unit
-                    {
-                        Name = $"Đơn vị đóng gói {i:D3}",
-                        Symbol = $"u{i:D3}",
-                        Description = "Đơn vị quy đổi nội bộ kho",
-                        IsActive = i % 11 != 0
-                    });
+                    name = $"Don vi dong goi {i:D4}";
+                    symbol = $"u{i:D4}";
                 }
+
+                if (!symbolSet.Add(symbol) || !nameSet.Add(name))
+                    continue;
+
+                list.Add(new Unit
+                {
+                    Name = name,
+                    Symbol = symbol,
+                    Description = $"Đơn vị {name}",
+                    IsActive = i % 11 != 0 || i <= unitDefs.Length
+                });
             }
 
-            // tránh trùng nếu đã có vài unit
-            var existSymbols = await db.Units.Select(x => x.Symbol).ToListAsync();
-            var symbolSet = existSymbols.ToHashSet(StringComparer.OrdinalIgnoreCase);
-            db.Units.AddRange(list.Where(x => symbolSet.Add(x.Symbol)));
-            await db.SaveChangesAsync();
+            if (list.Count > 0)
+            {
+                db.Units.AddRange(list);
+                await db.SaveChangesAsync();
+            }
         }
 
         // ----- Warehouses -----
         if (await db.Warehouses.CountAsync() < Target)
         {
+            var codeSet = (await db.Warehouses.Select(x => x.Code).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var nameSet = (await db.Warehouses.Select(x => x.Name).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var need = Target - await db.Warehouses.CountAsync();
             var list = new List<Warehouse>();
-            for (var i = 1; i <= Target; i++)
+
+            for (var i = 1; list.Count < need && i < 100_000; i++)
             {
+                var code = $"WH{i:D4}";
+                if (!codeSet.Add(code))
+                    continue;
+
                 var city = Cities[(i - 1) % Cities.Length];
+                var name = $"Kho demo {city} {code}";
+                if (!nameSet.Add(name))
+                    continue;
+
                 list.Add(new Warehouse
                 {
-                    Code = $"WH{i:D3}",
-                    Name = $"Kho {city} {(i > Cities.Length ? $"#{i}" : "trung tâm").Trim()}",
+                    Code = code,
+                    Name = name,
                     Address = $"{50 + i} {Streets[(i - 1) % Streets.Length]}, {city}",
-                    Phone = $"09{i:D8}"[..10],
+                    Phone = $"09{(i % 100_000_000):D8}"[..10],
                     ManagerName = PersonName(i),
                     Note = i % 5 == 0 ? "Kho lạnh" : "Kho thường",
                     IsActive = i % 19 != 0
                 });
             }
 
-            // sửa tên trùng logic
-            for (var i = 0; i < list.Count; i++)
+            if (list.Count > 0)
             {
-                list[i].Name = $"Kho {Cities[i % Cities.Length]} {list[i].Code}";
+                db.Warehouses.AddRange(list);
+                await db.SaveChangesAsync();
             }
-
-            db.Warehouses.AddRange(list);
-            await db.SaveChangesAsync();
         }
 
         // ----- Suppliers -----
         if (await db.Suppliers.CountAsync() < Target)
         {
+            var nameSet = (await db.Suppliers.Select(x => x.Name).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var need = Target - nameSet.Count;
             var list = new List<Supplier>();
-            for (var i = 1; i <= Target; i++)
+            for (var i = 1; list.Count < need && i < 100_000; i++)
             {
                 var city = Cities[(i - 1) % Cities.Length];
+                var name = $"NCC demo {city} {i:D4}";
+                if (!nameSet.Add(name))
+                    continue;
+
                 list.Add(new Supplier
                 {
-                    Name = $"Công ty CP Cung ứng {city} {i:D3}",
+                    Name = name,
                     ContactName = PersonName(i + 7),
-                    Phone = $"08{i:D8}"[..10],
-                    Email = $"ncc{i:D3}@supply.vn",
+                    Phone = $"08{(i % 100_000_000):D8}"[..10],
+                    Email = $"nccdemo{i:D4}@supply.vn",
                     Address = $"{100 + i} {Streets[i % Streets.Length]}, {city}",
-                    TaxCode = $"0{100000000 + i}",
-                    Note = "Nhà cung cấp phân phối hàng tiêu dùng",
+                    TaxCode = $"1{100000000 + i}",
+                    Note = "Nha cung cap phan phoi hang tieu dung",
                     IsActive = i % 13 != 0
                 });
             }
 
-            db.Suppliers.AddRange(list);
-            await db.SaveChangesAsync();
+            if (list.Count > 0)
+            {
+                db.Suppliers.AddRange(list);
+                await db.SaveChangesAsync();
+            }
         }
 
         // ----- Users (nhân sự kho + khách) -----
@@ -378,9 +548,11 @@ public static class DataSeeder
             var freeCustomerUsers = await db.Users
                 .Where(x => x.RoleId == customerRole.Id && !linkedSet.Contains(x.Id))
                 .OrderBy(x => x.Id)
-                .Take(80)
+                .Take(Target)
                 .ToListAsync();
 
+            var nameSet = (await db.Customers.Select(x => x.Name).ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var have = await db.Customers.CountAsync();
             var list = new List<Customer>();
             var userIdx = 0;
@@ -388,6 +560,10 @@ public static class DataSeeder
             for (var i = have + 1; i <= Target; i++)
             {
                 var city = Cities[(i - 1) % Cities.Length];
+                var name = $"Sieu thi / Dai ly {city} {i:D4}";
+                if (!nameSet.Add(name))
+                    continue;
+
                 int? userId = null;
                 if (userIdx < freeCustomerUsers.Count && i % 2 == 0)
                 {
@@ -397,20 +573,23 @@ public static class DataSeeder
 
                 list.Add(new Customer
                 {
-                    Name = $"Siêu thị / Đại lý {city} {i:D3}",
+                    Name = name,
                     ContactName = PersonName(i + 11),
-                    Phone = $"09{40 + (i % 50):D2}{i:D6}"[..10],
-                    Email = $"daily{i:D3}@retail.vn",
+                    Phone = $"09{40 + (i % 50):D2}{(i % 1_000_000):D6}"[..10],
+                    Email = $"daily{i:D4}@retail.vn",
                     Address = $"{200 + i} {Streets[i % Streets.Length]}, {city}",
-                    TaxCode = $"0{200000000 + i}",
-                    Note = "Khách hàng bán lẻ / phân phối",
+                    TaxCode = $"2{200000000 + i}",
+                    Note = "Khach hang ban le / phan phoi",
                     IsActive = i % 15 != 0,
                     UserId = userId
                 });
             }
 
-            db.Customers.AddRange(list);
-            await db.SaveChangesAsync();
+            if (list.Count > 0)
+            {
+                db.Customers.AddRange(list);
+                await db.SaveChangesAsync();
+            }
         }
 
         var categories = await db.Categories.OrderBy(x => x.Id).ToListAsync();
@@ -419,67 +598,20 @@ public static class DataSeeder
         var suppliers = await db.Suppliers.OrderBy(x => x.Id).ToListAsync();
         var customers = await db.Customers.OrderBy(x => x.Id).ToListAsync();
 
-        // ----- Products + ProductImages -----
-        if (await db.Products.CountAsync() < Target)
+        // Products được EnsureDemoProductsAsync top-up sau SeedDemoDataAsync
+        var productsAll = await db.Products.OrderBy(x => x.Id).ToListAsync();
+        if (productsAll.Count == 0)
         {
-            var products = new List<Product>();
-            for (var i = 1; i <= Target; i++)
-            {
-                var baseName = ProductBases[(i - 1) % ProductBases.Length];
-                var name = i <= ProductBases.Length
-                    ? baseName
-                    : $"{baseName} loại {(char)('A' + ((i - 1) / ProductBases.Length) % 26)}";
-
-                products.Add(new Product
-                {
-                    Sku = $"SP{i:D4}",
-                    Name = name,
-                    Description = $"{name} — hàng tiêu dùng phổ biến, đóng gói sẵn xuất kho",
-                    Price = 5000 + (i * 137) % 500000,
-                    MinStock = 5 + (i % 20),
-                    CategoryId = categories[(i - 1) % categories.Count].Id,
-                    UnitId = units[(i - 1) % units.Count].Id,
-                    IsActive = i % 21 != 0
-                });
-            }
-
-            db.Products.AddRange(products);
-            await db.SaveChangesAsync();
-
-            // ~100+ ảnh (1-2 ảnh / sản phẩm đầu)
-            var images = new List<ProductImage>();
-            var savedProducts = await db.Products.OrderBy(x => x.Id).Take(Target).ToListAsync();
-            var imgId = 0;
-            foreach (var p in savedProducts)
-            {
-                imgId++;
-                images.Add(new ProductImage
-                {
-                    ProductId = p.Id,
-                    ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-1.png",
-                    SortOrder = 0,
-                    IsPrimary = true
-                });
-
-                if (imgId <= 50)
-                {
-                    images.Add(new ProductImage
-                    {
-                        ProductId = p.Id,
-                        ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-2.png",
-                        SortOrder = 1,
-                        IsPrimary = false
-                    });
-                }
-            }
-
-            db.ProductImages.AddRange(images);
-            await db.SaveChangesAsync();
+            // Lần đầu: tạo tạm trong SeedDemoData để phiếu/tồn có FK — EnsureDemoProductsAsync sẽ bổ sung đủ Target
+            await EnsureDemoProductsAsync(db);
+            productsAll = await db.Products.OrderBy(x => x.Id).ToListAsync();
         }
 
-        var productsAll = await db.Products.OrderBy(x => x.Id).ToListAsync();
+        if (categories.Count == 0 || units.Count == 0 || warehouses.Count == 0
+            || suppliers.Count == 0 || customers.Count == 0 || productsAll.Count == 0)
+            return;
 
-        // ----- WarehouseStocks (đủ 100 dòng) + StockTransactions Manual -----
+        // ----- WarehouseStocks (đủ Target dòng) + StockTransactions Manual -----
         var stockNeed = Target - await db.WarehouseStocks.CountAsync();
         if (stockNeed > 0)
         {
@@ -531,12 +663,21 @@ public static class DataSeeder
             }
         }
 
-        // ----- ImportReceipts + Details (100) -----
-        if (!await db.ImportReceipts.AnyAsync(x => x.Code.StartsWith("PN-SEED-")))
+        // ----- ImportReceipts + Details (top-up PN-SEED-0001…0500) -----
         {
+            var codeSet = (await db.ImportReceipts
+                    .Where(x => x.Code.StartsWith("PN-SEED-"))
+                    .Select(x => x.Code)
+                    .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var receipts = new List<ImportReceipt>();
             for (var i = 1; i <= Target; i++)
             {
+                var code = $"PN-SEED-{i:D4}";
+                if (!codeSet.Add(code))
+                    continue;
+
                 var status = i % 10 == 0
                     ? ImportReceiptStatus.Cancelled
                     : i % 3 == 0
@@ -556,7 +697,7 @@ public static class DataSeeder
                         Quantity = 10 + (i % 40),
                         UnitPrice = p1.Price * 0.7m,
                         LineTotal = Math.Round((10 + (i % 40)) * p1.Price * 0.7m, 2),
-                        Note = "Dòng nhập chính"
+                        Note = "Dong nhap chinh"
                     }
                 };
 
@@ -573,58 +714,66 @@ public static class DataSeeder
 
                 receipts.Add(new ImportReceipt
                 {
-                    Code = $"PN-SEED-{i:D4}",
+                    Code = code,
                     ReceiptDate = DateTime.UtcNow.AddDays(-Target + i),
                     WarehouseId = wh.Id,
                     SupplierId = sup.Id,
                     Status = status,
-                    Note = $"Phiếu nhập hàng từ {sup.Name}",
+                    Note = $"Phieu nhap hang tu {sup.Name}",
                     ConfirmedAt = status == ImportReceiptStatus.Confirmed ? DateTime.UtcNow.AddDays(-Target + i) : null,
                     CancelledAt = status == ImportReceiptStatus.Cancelled ? DateTime.UtcNow.AddDays(-Target + i + 1) : null,
                     Details = details
                 });
             }
 
-            db.ImportReceipts.AddRange(receipts);
-            await db.SaveChangesAsync();
-
-            // Ghi transaction minh họa cho phiếu Confirmed (không đụng lại tồn seed để tránh lệch lớn)
-            var confirmedImports = await db.ImportReceipts
-                .Include(x => x.Details)
-                .Where(x => x.Status == ImportReceiptStatus.Confirmed && x.Code.StartsWith("PN-SEED-"))
-                .ToListAsync();
-
-            var importTxs = new List<StockTransaction>();
-            foreach (var r in confirmedImports)
+            if (receipts.Count > 0)
             {
-                foreach (var d in r.Details)
+                db.ImportReceipts.AddRange(receipts);
+                await db.SaveChangesAsync();
+
+                var newCodes = receipts.Select(x => x.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var confirmedImports = await db.ImportReceipts
+                    .Include(x => x.Details)
+                    .Where(x => x.Status == ImportReceiptStatus.Confirmed && newCodes.Contains(x.Code))
+                    .ToListAsync();
+
+                var importTxs = confirmedImports.SelectMany(r => r.Details.Select(d => new StockTransaction
                 {
-                    importTxs.Add(new StockTransaction
-                    {
-                        WarehouseId = r.WarehouseId,
-                        ProductId = d.ProductId,
-                        Type = StockTransactionType.Import,
-                        QuantityChange = d.Quantity,
-                        QuantityBefore = 0,
-                        QuantityAfter = d.Quantity,
-                        ReferenceType = StockReferenceTypes.ImportReceipt,
-                        ReferenceId = r.Id,
-                        ReferenceCode = r.Code,
-                        Note = $"Seed nhập {r.Code}"
-                    });
+                    WarehouseId = r.WarehouseId,
+                    ProductId = d.ProductId,
+                    Type = StockTransactionType.Import,
+                    QuantityChange = d.Quantity,
+                    QuantityBefore = 0,
+                    QuantityAfter = d.Quantity,
+                    ReferenceType = StockReferenceTypes.ImportReceipt,
+                    ReferenceId = r.Id,
+                    ReferenceCode = r.Code,
+                    Note = $"Seed nhap {r.Code}"
+                })).ToList();
+
+                if (importTxs.Count > 0)
+                {
+                    db.StockTransactions.AddRange(importTxs);
+                    await db.SaveChangesAsync();
                 }
             }
-
-            db.StockTransactions.AddRange(importTxs);
-            await db.SaveChangesAsync();
         }
 
-        // ----- ExportReceipts + Details (100) -----
-        if (!await db.ExportReceipts.AnyAsync(x => x.Code.StartsWith("PX-SEED-")))
+        // ----- ExportReceipts + Details (top-up PX-SEED-0001…0500) -----
         {
+            var codeSet = (await db.ExportReceipts
+                    .Where(x => x.Code.StartsWith("PX-SEED-"))
+                    .Select(x => x.Code)
+                    .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var receipts = new List<ExportReceipt>();
             for (var i = 1; i <= Target; i++)
             {
+                var code = $"PX-SEED-{i:D4}";
+                if (!codeSet.Add(code))
+                    continue;
+
                 var status = i % 10 == 0
                     ? ExportReceiptStatus.Cancelled
                     : i % 4 == 0
@@ -637,12 +786,12 @@ public static class DataSeeder
 
                 receipts.Add(new ExportReceipt
                 {
-                    Code = $"PX-SEED-{i:D4}",
+                    Code = code,
                     ReceiptDate = DateTime.UtcNow.AddDays(-Target + i + 2),
                     WarehouseId = wh.Id,
                     CustomerId = cus.Id,
                     Status = status,
-                    Note = $"Xuất bán cho {cus.Name}",
+                    Note = $"Xuat ban cho {cus.Name}",
                     ConfirmedAt = status == ExportReceiptStatus.Confirmed ? DateTime.UtcNow.AddDays(-Target + i + 2) : null,
                     CancelledAt = status == ExportReceiptStatus.Cancelled ? DateTime.UtcNow.AddDays(-Target + i + 3) : null,
                     Details =
@@ -653,44 +802,60 @@ public static class DataSeeder
                             Quantity = 1 + (i % 10),
                             UnitPrice = p1.Price,
                             LineTotal = Math.Round((1 + (i % 10)) * p1.Price, 2),
-                            Note = "Xuất theo đơn"
+                            Note = "Xuat theo don"
                         }
                     ]
                 });
             }
 
-            db.ExportReceipts.AddRange(receipts);
-            await db.SaveChangesAsync();
-
-            var confirmedExports = await db.ExportReceipts
-                .Include(x => x.Details)
-                .Where(x => x.Status == ExportReceiptStatus.Confirmed && x.Code.StartsWith("PX-SEED-"))
-                .ToListAsync();
-
-            var exportTxs = confirmedExports.SelectMany(r => r.Details.Select(d => new StockTransaction
+            if (receipts.Count > 0)
             {
-                WarehouseId = r.WarehouseId,
-                ProductId = d.ProductId,
-                Type = StockTransactionType.Export,
-                QuantityChange = -d.Quantity,
-                QuantityBefore = d.Quantity,
-                QuantityAfter = 0,
-                ReferenceType = StockReferenceTypes.ExportReceipt,
-                ReferenceId = r.Id,
-                ReferenceCode = r.Code,
-                Note = $"Seed xuất {r.Code}"
-            })).ToList();
+                db.ExportReceipts.AddRange(receipts);
+                await db.SaveChangesAsync();
 
-            db.StockTransactions.AddRange(exportTxs);
-            await db.SaveChangesAsync();
+                var newCodes = receipts.Select(x => x.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var confirmedExports = await db.ExportReceipts
+                    .Include(x => x.Details)
+                    .Where(x => x.Status == ExportReceiptStatus.Confirmed && newCodes.Contains(x.Code))
+                    .ToListAsync();
+
+                var exportTxs = confirmedExports.SelectMany(r => r.Details.Select(d => new StockTransaction
+                {
+                    WarehouseId = r.WarehouseId,
+                    ProductId = d.ProductId,
+                    Type = StockTransactionType.Export,
+                    QuantityChange = -d.Quantity,
+                    QuantityBefore = d.Quantity,
+                    QuantityAfter = 0,
+                    ReferenceType = StockReferenceTypes.ExportReceipt,
+                    ReferenceId = r.Id,
+                    ReferenceCode = r.Code,
+                    Note = $"Seed xuat {r.Code}"
+                })).ToList();
+
+                if (exportTxs.Count > 0)
+                {
+                    db.StockTransactions.AddRange(exportTxs);
+                    await db.SaveChangesAsync();
+                }
+            }
         }
 
-        // ----- Stocktakes + Details (100) -----
-        if (!await db.Stocktakes.AnyAsync(x => x.Code.StartsWith("KK-SEED-")))
+        // ----- Stocktakes + Details (top-up KK-SEED-0001…0500) -----
         {
+            var codeSet = (await db.Stocktakes
+                    .Where(x => x.Code.StartsWith("KK-SEED-"))
+                    .Select(x => x.Code)
+                    .ToListAsync())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
             var list = new List<Stocktake>();
             for (var i = 1; i <= Target; i++)
             {
+                var code = $"KK-SEED-{i:D4}";
+                if (!codeSet.Add(code))
+                    continue;
+
                 var status = i % 5 == 0
                     ? StocktakeStatus.Cancelled
                     : i % 3 == 0
@@ -704,11 +869,11 @@ public static class DataSeeder
 
                 list.Add(new Stocktake
                 {
-                    Code = $"KK-SEED-{i:D4}",
+                    Code = code,
                     StocktakeDate = DateTime.UtcNow.AddDays(-i),
                     WarehouseId = wh.Id,
                     Status = status,
-                    Note = $"Kiểm kê định kỳ kho {wh.Code}",
+                    Note = $"Kiem ke dinh ky kho {wh.Code}",
                     ConfirmedAt = status == StocktakeStatus.Confirmed ? DateTime.UtcNow.AddDays(-i) : null,
                     CancelledAt = status == StocktakeStatus.Cancelled ? DateTime.UtcNow.AddDays(-i + 1) : null,
                     Details =
@@ -719,36 +884,43 @@ public static class DataSeeder
                             SystemQuantity = systemQty,
                             CountedQuantity = counted,
                             Difference = counted - systemQty,
-                            Note = counted == systemQty ? "Khớp" : "Có chênh lệch"
+                            Note = counted == systemQty ? "Khop" : "Co chenh lech"
                         }
                     ]
                 });
             }
 
-            db.Stocktakes.AddRange(list);
-            await db.SaveChangesAsync();
-
-            var confirmedKk = await db.Stocktakes
-                .Include(x => x.Details)
-                .Where(x => x.Status == StocktakeStatus.Confirmed && x.Code.StartsWith("KK-SEED-"))
-                .ToListAsync();
-
-            var kkTxs = confirmedKk.SelectMany(s => s.Details.Select(d => new StockTransaction
+            if (list.Count > 0)
             {
-                WarehouseId = s.WarehouseId,
-                ProductId = d.ProductId,
-                Type = StockTransactionType.Stocktake,
-                QuantityChange = d.Difference,
-                QuantityBefore = d.SystemQuantity,
-                QuantityAfter = d.CountedQuantity,
-                ReferenceType = StockReferenceTypes.Stocktake,
-                ReferenceId = s.Id,
-                ReferenceCode = s.Code,
-                Note = $"Seed kiểm kê {s.Code}"
-            })).ToList();
+                db.Stocktakes.AddRange(list);
+                await db.SaveChangesAsync();
 
-            db.StockTransactions.AddRange(kkTxs);
-            await db.SaveChangesAsync();
+                var newCodes = list.Select(x => x.Code).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var confirmedKk = await db.Stocktakes
+                    .Include(x => x.Details)
+                    .Where(x => x.Status == StocktakeStatus.Confirmed && newCodes.Contains(x.Code))
+                    .ToListAsync();
+
+                var kkTxs = confirmedKk.SelectMany(s => s.Details.Select(d => new StockTransaction
+                {
+                    WarehouseId = s.WarehouseId,
+                    ProductId = d.ProductId,
+                    Type = StockTransactionType.Stocktake,
+                    QuantityChange = d.Difference,
+                    QuantityBefore = d.SystemQuantity,
+                    QuantityAfter = d.CountedQuantity,
+                    ReferenceType = StockReferenceTypes.Stocktake,
+                    ReferenceId = s.Id,
+                    ReferenceCode = s.Code,
+                    Note = $"Seed kiem ke {s.Code}"
+                })).ToList();
+
+                if (kkTxs.Count > 0)
+                {
+                    db.StockTransactions.AddRange(kkTxs);
+                    await db.SaveChangesAsync();
+                }
+            }
         }
     }
 

@@ -60,13 +60,56 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Key)),
             ClockSkew = TimeSpan.Zero
         };
-        // Token hết hạn/sai: coi như chưa đăng nhập (để [AllowAnonymous] catalog vẫn chạy)
         options.Events = new JwtBearerEvents
         {
+            // Cho phép dán nhầm "Bearer <token>" vào ô Swagger (tránh "Bearer Bearer ...")
+            OnMessageReceived = context =>
+            {
+                var header = context.Request.Headers.Authorization.ToString();
+                if (string.IsNullOrWhiteSpace(header))
+                    return Task.CompletedTask;
+
+                const string prefix = "Bearer ";
+                if (!header.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return Task.CompletedTask;
+
+                var rest = header[prefix.Length..].Trim();
+                while (rest.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    rest = rest[prefix.Length..].Trim();
+
+                if (!string.IsNullOrWhiteSpace(rest))
+                    context.Token = rest;
+
+                return Task.CompletedTask;
+            },
+            // Token hết hạn/sai: coi như chưa đăng nhập (để [AllowAnonymous] catalog vẫn chạy)
             OnAuthenticationFailed = context =>
             {
                 context.NoResult();
                 return Task.CompletedTask;
+            },
+            // 401 có body JSON (Swagger không còn "Undocumented" trống)
+            OnChallenge = async context =>
+            {
+                context.HandleResponse();
+                if (context.Response.HasStarted)
+                    return;
+
+                context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(
+                    ApiResponse<object>.Fail(
+                        "Chưa đăng nhập hoặc token không hợp lệ. Swagger: POST /auth/admin/login → copy data.token → nút Authorize → chỉ dán token → Authorize."));
+            },
+            OnForbidden = async context =>
+            {
+                if (context.Response.HasStarted)
+                    return;
+
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                context.Response.ContentType = "application/json";
+                await context.Response.WriteAsJsonAsync(
+                    ApiResponse<object>.Fail("Không đủ quyền truy cập API này."));
             }
         };
     });
@@ -81,13 +124,20 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Warehouse Management API",
-        Version = "v1"
+        Version = "v1",
+        Description =
+            "Cách test: 1) POST /api/v1/auth/admin/login (admin/123456) → " +
+            "2) Hệ thống tự Authorize token (hoặc bấm ổ khóa dán token) → " +
+            "3) GET/POST/PUT/DELETE. Curl phải có: Authorization: Bearer ..."
     });
 
-    // Nút Authorize trên Swagger: dán token vào
+    // Nút Authorize: CHỈ dán token (Swagger tự thêm chữ Bearer)
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "Nhập JWT theo dạng: Bearer {token}",
+        Description =
+            "1) POST /api/v1/auth/admin/login (admin / 123456)\n" +
+            "2) Copy data.token\n" +
+            "3) Dán VÀO ĐÂY chỉ phần token (không gõ thêm chữ Bearer)",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
@@ -95,9 +145,11 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT"
     });
 
-    options.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+    // Bắt buộc truyền OpenApiDocument vào Reference — nếu không, swagger.json ra security: [{}]
+    // → Swagger UI Authorize xong vẫn KHÔNG gửi header Authorization (CRUD bị 401).
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
-        [new OpenApiSecuritySchemeReference("Bearer")] = []
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
     });
 });
 
@@ -125,7 +177,8 @@ var app = builder.Build();
 await DataSeeder.SeedAsync(app.Services);
 
 // ===== Middleware =====
-// Bắt exception domain → map HTTP status + ApiResponse.Fail (không lộ chi tiết 500)
+// Bắt exception domain → map HTTP status + ApiResponse.Fail
+// Không nuốt lỗi Swagger (để dễ debug schema/controller)
 app.Use(async (context, next) =>
 {
     try
@@ -134,6 +187,15 @@ app.Use(async (context, next) =>
     }
     catch (Exception ex)
     {
+        // Swagger/OpenAPI: trả message thật (không giấu thành "lỗi hệ thống")
+        if (context.Request.Path.StartsWithSegments("/swagger"))
+        {
+            context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+            context.Response.ContentType = "text/plain; charset=utf-8";
+            await context.Response.WriteAsync(ex.ToString());
+            return;
+        }
+
         var status = ex switch
         {
             NotFoundException => (int)HttpStatusCode.NotFound,
@@ -151,15 +213,21 @@ app.Use(async (context, next) =>
     }
 });
 
-// Dev: mở Swagger UI
+app.UseHttpsRedirection();
+app.UseStaticFiles(); // /uploads/... + /swagger-ui/auto-authorize.js
+
+// Dev: Swagger UI — tự gắn JWT sau login (xem wwwroot/swagger-ui/auto-authorize.js)
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.EnablePersistAuthorization();
+        options.DisplayRequestDuration();
+        options.InjectJavascript("/swagger-ui/auto-authorize.js");
+    });
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles(); // phục vụ /uploads/avatars/...
 app.UseCors("Frontend");
 app.UseAuthentication(); // đọc JWT
 app.UseAuthorization();  // kiểm [Authorize]

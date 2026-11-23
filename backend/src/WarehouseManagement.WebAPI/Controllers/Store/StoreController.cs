@@ -104,7 +104,8 @@ public class StoreController : ControllerBase
     [Authorize(Roles = AppRoles.Customer)]
     [HttpPost("me/avatar")]
     [RequestSizeLimit(2 * 1024 * 1024)]
-    public async Task<IActionResult> UploadMyAvatar([FromForm] IFormFile? file)
+    // Không gắn [FromForm] trên IFormFile — Swagger/Swashbuckle sẽ lỗi generate
+    public async Task<IActionResult> UploadMyAvatar(IFormFile? file)
     {
         FormFileHelper.EnsureValidImage(file);
         var userId = RequireUserId();

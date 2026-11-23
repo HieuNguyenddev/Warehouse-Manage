@@ -12,7 +12,8 @@ Hai cổng:
 ```bash
 # Terminal 1 — API (CORS đã bật cho :5173)
 cd backend/src/WarehouseManagement.WebAPI
-dotnet run --urls "http://localhost:5080"
+dotnet run --launch-profile http
+# → http://localhost:5136
 
 # Terminal 2 — Frontend
 cd frontend
@@ -29,4 +30,5 @@ Mở http://localhost:5173
 | Admin | `admin` / `manager` / `staff` | `123456` |
 | Store | `customer1` | `123456` |
 
-Vite proxy `/api` và `/uploads` → `http://localhost:5080`.
+Vite proxy `/api` và `/uploads` → `http://127.0.0.1:5136` (xem `.env.development`).  
+Nếu log hiện `ECONNREFUSED` / `[api] CHƯA CHẠY`: **chạy backend trước**, rồi F5 lại trang.
