@@ -27,6 +27,8 @@ TestResults/
 .env
 .env.*
 !.env.example
+!.env.development
+# (không secret — chỉ URL proxy dev)
 
 # Frontend (Node / Vite)
 frontend/node_modules/
@@ -44,3 +46,9 @@ logs/
 tmp/
 temp/
 .cursor/
+
+# Uploads generate runtime (DataSeeder) — không commit; giữ templates/
+backend/src/WarehouseManagement.WebAPI/wwwroot/uploads/products/demo-*
+backend/src/WarehouseManagement.WebAPI/wwwroot/uploads/avatars/
+!backend/src/WarehouseManagement.WebAPI/wwwroot/uploads/products/templates/
+!backend/src/WarehouseManagement.WebAPI/wwwroot/uploads/products/templates/**

@@ -15,12 +15,24 @@ public class ProductsController : AdminApiController
         _productService = productService;
     }
 
-    /// <summary>GET /api/v1/products — danh sách + tìm kiếm + lọc category.</summary>
+    /// <summary>
+    /// GET /api/v1/products — danh sách sản phẩm.
+    /// Tất cả query đều optional: trên Swagger chỉ cần bấm Execute
+    /// (mặc định pageNumber=1, pageSize=10).
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] PaginationQuery query,
+        [FromQuery] string? search = null,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
         [FromQuery] int? categoryId = null)
     {
+        var query = new PaginationQuery
+        {
+            Search = search,
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
         var result = await _productService.GetAllAsync(query, categoryId);
         return Ok(ApiResponse<PagedResult<ProductResponseDto>>.Ok(result));
     }
@@ -66,7 +78,8 @@ public class ProductsController : AdminApiController
     /// </summary>
     [HttpPost("{id:int}/images")]
     [RequestSizeLimit(20 * 1024 * 1024)]
-    public async Task<IActionResult> AddImages(int id, [FromForm] List<IFormFile> files)
+    // Không gắn [FromForm] trên IFormFile/List<IFormFile> — Swagger sẽ lỗi generate
+    public async Task<IActionResult> AddImages(int id, List<IFormFile> files)
     {
         if (files is null || files.Count == 0)
             return BadRequest(ApiResponse<object>.Fail("Chưa chọn ảnh."));
@@ -100,7 +113,7 @@ public class ProductsController : AdminApiController
     /// <summary>PUT /api/v1/products/{id}/images/{imageId} — thay 1 ảnh.</summary>
     [HttpPut("{id:int}/images/{imageId:int}")]
     [RequestSizeLimit(20 * 1024 * 1024)]
-    public async Task<IActionResult> ReplaceImage(int id, int imageId, [FromForm] IFormFile? file)
+    public async Task<IActionResult> ReplaceImage(int id, int imageId, IFormFile? file)
     {
         FormFileHelper.EnsureValidImage(file);
         await using var stream = file!.OpenReadStream();

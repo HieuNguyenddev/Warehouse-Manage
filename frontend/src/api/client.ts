@@ -78,11 +78,28 @@ export async function apiRequest<T>(
     headers.set('Content-Type', 'application/json')
   }
 
-  const res = await fetch(path, { ...options, headers })
+  let res: Response
+  try {
+    res = await fetch(path, { ...options, headers })
+  } catch {
+    throw new ApiError(
+      0,
+      'Không kết nối được API. Hãy chạy backend: dotnet run --launch-profile http (cổng 5136).',
+    )
+  }
+
   if (res.status === 204) return undefined as T
 
   const json = (await res.json().catch(() => null)) as ApiResponse<T> | null
   if (!res.ok) {
+    // Backend tắt / proxy 502 — không xóa session
+    if (res.status === 502) {
+      throw new ApiError(
+        502,
+        json?.message ||
+          'API chưa sẵn sàng (proxy 502). Chạy backend cổng 5136 rồi thử lại.',
+      )
+    }
     // Token hết hạn / không hợp lệ → xóa session và về trang đăng nhập
     if (res.status === 401) {
       const loginPath = portal === 'customer' ? '/store/login' : '/admin/login'
