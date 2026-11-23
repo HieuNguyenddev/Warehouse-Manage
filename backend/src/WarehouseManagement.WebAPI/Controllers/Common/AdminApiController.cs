@@ -9,6 +9,8 @@ namespace WarehouseManagement.WebAPI.Controllers;
 [Authorize(Roles = AppRoles.AdminPortal)]
 [ApiController]
 [Route("api/v1/[controller]")]
+[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status403Forbidden)]
 public abstract class AdminApiController : ControllerBase
 {
 }
