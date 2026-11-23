@@ -7,7 +7,7 @@ using WarehouseManagement.Shared;
 namespace WarehouseManagement.Infrastructure.Persistence;
 
 /// <summary>
-/// Seed role/user đăng nhập + dữ liệu demo nghiệp vụ.
+/// Seed role/user đăng nhập + dữ liệu demo nghiệp vụ kho nhà thuốc bệnh viện.
 /// Mỗi bảng nghiệp vụ: <see cref="Target"/> bản ghi (mặc định 500) để test phân trang / filter.
 /// </summary>
 public static class DataSeeder
@@ -15,7 +15,7 @@ public static class DataSeeder
     private const int Target = 500; // Số bản ghi mục tiêu mỗi bảng demo
     private const string DemoPassword = "123456"; // Mật khẩu demo cho mọi user seed
 
-    // ----- Dữ liệu mẫu tên/địa chỉ/danh mục (dùng quay vòng khi sinh bản ghi) -----
+    // Dữ liệu mẫu tên/địa chỉ/danh mục (quay vòng khi sinh bản ghi kho dược).
     private static readonly string[] LastNames =
     [
         "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ", "Đặng",
@@ -46,28 +46,49 @@ public static class DataSeeder
         "Trường Chinh", "Tô Hiến Thành", "Nguyễn Thị Minh Khai", "Võ Văn Tần"
     ];
 
+    // Nhóm thuốc / vật tư theo nghiệp vụ nhà thuốc bệnh viện.
     private static readonly string[] CategoryNames =
     [
-        "Thực phẩm khô", "Thực phẩm tươi", "Đồ uống", "Sữa và chế phẩm", "Bánh kẹo",
-        "Gia vị", "Đồ hộp", "Hải sản đông lạnh", "Thịt đông lạnh", "Rau củ quả",
-        "Ngũ cốc", "Dầu ăn", "Đồ dùng nhà bếp", "Vệ sinh cá nhân", "Hóa mỹ phẩm",
-        "Đồ giấy", "Văn phòng phẩm", "Thiết bị điện nhỏ", "Phụ kiện điện thoại", "Đồ chơi",
-        "Thời trang", "Giày dép", "Túi xách", "Dược phẩm OTC", "Thực phẩm chức năng",
-        "Thức ăn chăn nuôi", "Vật liệu xây dựng nhẹ", "Sơn và keo", "Dụng cụ cầm tay",
-        "Bao bì đóng gói"
+        "Kháng sinh", "Giảm đau hạ sốt", "Kháng viêm", "Tim mạch", "Tiêu hóa",
+        "Hô hấp", "Thần kinh", "Nội tiết", "Vitamin khoáng chất", "Dịch truyền điện giải",
+        "Gây mê hồi sức", "Chống dị ứng", "Da liễu", "Mắt tai mũi họng", "Sản phụ khoa",
+        "Ung thư hóa chất", "Thuốc tiêm", "Thuốc uống viên", "Thuốc siro hỗn dịch", "Thuốc bôi ngoài da",
+        "Vắc xin sinh phẩm", "Vật tư tiêu hao", "Dụng cụ y tế", "Hóa chất xét nghiệm", "Thuốc hướng thần",
+        "Thuốc gây nghiện kiểm soát", "Thuốc cấp cứu", "Dinh dưỡng lâm sàng", "Kháng nấm kháng virus", "Kháng đông cầm máu"
     ];
 
-    private static readonly string[] ProductBases =
+    // Khoa/phòng nhận thuốc (đóng vai "khách hàng" nội bộ bệnh viện).
+    private static readonly string[] HospitalDepartments =
     [
-        "Gạo ST25", "Gạo Jasmine", "Đường trắng", "Muối i-ốt", "Nước mắm", "Dầu đậu nành",
-        "Mì gói", "Phở khô", "Sữa tươi", "Sữa đặc", "Cà phê rang xay", "Trà xanh",
-        "Nước suối", "Nước ngọt", "Bia lon", "Khăn giấy", "Nước rửa chén", "Nước giặt",
-        "Bột giặt", "Xà phòng", "Dầu gội", "Sữa tắm", "Kem đánh răng", "Bàn chải",
-        "Pin AA", "Bóng đèn LED", "Ổ cắm điện", "Băng keo", "Thùng carton", "Màng PE",
-        "Bánh quy", "Kẹo mềm", "Snack khoai", "Hạt điều", "Nho khô", "Tương ớt",
-        "Tương cà", "Mayonnaise", "Dầu oliu", "Bơ thực vật", "Phô mai", "Yaourt",
-        "Thịt heo đông lạnh", "Thịt gà đông lạnh", "Cá basa", "Tôm sú", "Rau củ hỗn hợp",
-        "Nấm đông cô", "Đậu hũ", "Trứng gà", "Mật ong", "Yến mạch"
+        "Khoa Nội tổng hợp", "Khoa Ngoại tổng hợp", "Khoa Nhi", "Khoa Sản", "Khoa Cấp cứu",
+        "Khoa Hồi sức ICU", "Khoa Tim mạch", "Khoa Hô hấp", "Khoa Thần kinh", "Khoa Ung bướu",
+        "Khoa Truyền nhiễm", "Khoa Mắt", "Khoa Tai mũi họng", "Khoa Da liễu", "Khoa Thận lọc máu",
+        "Phòng mổ trung tâm", "Nhà thuốc bệnh nhân ngoại trú", "Khoa Xét nghiệm", "Khoa Chẩn đoán hình ảnh",
+        "Khoa Phục hồi chức năng"
+    ];
+
+    // Nhà cung cấp dược / vật tư y tế.
+    private static readonly string[] PharmaSupplierBases =
+    [
+        "Công ty Dược phẩm Trung ương", "Dược Hậu Giang", "Pymepharco", "Imexpharm",
+        "Stada Việt Nam", "Sanofi Việt Nam", "GSK Pharma", "AstraZeneca VN",
+        "Roche Diagnostics", "Baxter Healthcare", "B.Braun Medical", "Nipro Medical",
+        "Medtronic Việt Nam", "Công ty Vật tư y tế Việt Đức", "Pharmacity Distribution",
+        "Diethelm Healthcare", "Zuellig Pharma", "DKSH Healthcare", "Mega Lifesciences",
+        "Domesco"
+    ];
+
+    // Đơn vị đóng gói phổ biến trong kho dược / vật tư y tế.
+    private static readonly (string Name, string Symbol)[] PharmacyUnitDefs =
+    [
+        ("Viên", "vien"), ("Vỉ", "vi"), ("Hộp", "hop"), ("Chai", "chai"),
+        ("Lọ", "lo"), ("Ống", "ong"), ("Tuýp", "tuyp"), ("Gói", "goi"),
+        ("Túi", "tui"), ("Lọ xịt", "xit"), ("Bình dịch truyền", "binh"),
+        ("Mililít", "ml"), ("Lít", "l"), ("Gram", "g"), ("Kilogram", "kg"),
+        ("Đơn vị quốc tế", "iu"), ("Ống tiêm", "syr"), ("Kim tiêm", "kim"),
+        ("Cuộn", "cuon"), ("Tờ", "to"), ("Bộ", "bo"), ("Cái", "cai"),
+        ("Thùng", "thung"), ("Thùng 12 hộp", "th12"), ("Thùng 24 hộp", "th24"),
+        ("Lốc 6", "loc6"), ("Lốc 10", "loc10")
     ];
 
     /// <summary>
@@ -82,9 +103,315 @@ public static class DataSeeder
         await db.Database.MigrateAsync(); // Áp dụng migration chưa chạy
         await SeedRolesAndLoginUsersAsync(db);
         await SeedDemoDataAsync(db);
-        // Top-up Products → Target (idempotent) + ảnh hiển thị được trên UI
+        // Top-up Products tới Target (idempotent) + ảnh hiển thị được trên UI
         await EnsureDemoProductsAsync(db);
+        // Đổi nhãn / tên toàn bộ bản ghi demo sang ngữ cảnh kho nhà thuốc bệnh viện
+        // (kể cả DB đã seed trước đó với dữ liệu siêu thị / thực phẩm).
+        await RefreshPharmacyDomainLabelsAsync(db);
+        await EnsureImportPurchaseCostsAndInvoicesAsync(db);
+        await EnsureStorefrontUniqueProductsAsync(db);
         await EnsureProductImagesReadyAsync(db, env.ContentRootPath);
+    }
+
+    /// <summary>
+    /// Ẩn SP mã lệch (SP-001…) khỏi cổng người dùng; chỉ giữ SKU SP#### active.
+    /// </summary>
+    private static async Task EnsureStorefrontUniqueProductsAsync(ApplicationDbContext db)
+    {
+        var odd = await db.Products
+            .Where(x => x.IsActive && !EF.Functions.Like(x.Sku, "SP[0-9][0-9][0-9][0-9]"))
+            .ToListAsync();
+        foreach (var p in odd)
+            p.IsActive = false;
+
+        // Nếu trùng tên (không phân biệt hoa thường) → giữ Id nhỏ nhất, tắt các bản còn lại
+        var dups = await db.Products
+            .Where(x => x.IsActive)
+            .GroupBy(x => x.Name)
+            .Where(g => g.Count() > 1)
+            .Select(g => new { KeepId = g.Min(x => x.Id), Ids = g.Select(x => x.Id).ToList() })
+            .ToListAsync();
+
+        foreach (var g in dups)
+        {
+            foreach (var id in g.Ids.Where(id => id != g.KeepId))
+            {
+                var p = await db.Products.FindAsync(id);
+                if (p is not null) p.IsActive = false;
+            }
+        }
+
+        if (odd.Count > 0 || dups.Count > 0)
+            await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Backfill chi phí nhập + mã hóa đơn mua hàng cho phiếu Confirmed cũ (idempotent).
+    /// </summary>
+    private static async Task EnsureImportPurchaseCostsAndInvoicesAsync(ApplicationDbContext db)
+    {
+        var receipts = await db.ImportReceipts
+            .Include(x => x.Details)
+            .Where(x => x.Status == ImportReceiptStatus.Confirmed &&
+                        (x.PurchaseInvoiceCode == null || x.PurchaseInvoiceCode == string.Empty))
+            .OrderBy(x => x.Id)
+            .ToListAsync();
+
+        if (receipts.Count == 0)
+            return;
+
+        var seq = 1;
+        foreach (var r in receipts)
+        {
+            var goods = r.Details.Sum(d => d.LineTotal);
+            if (r.ShippingFee <= 0)
+                r.ShippingFee = 50_000m + (r.Id % 7) * 10_000m;
+            if (r.TradeDiscount <= 0 && goods > 0)
+                r.TradeDiscount = Math.Round(goods * 0.02m, 0);
+            if (r.NonRefundableTax <= 0 && goods > 0)
+                r.NonRefundableTax = Math.Round(goods * 0.05m, 0);
+
+            r.PurchaseInvoiceCode = $"HDN-SEED-{seq:D4}";
+            seq++;
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Cập nhật tên/mô tả các bảng demo sang kho dược bệnh viện (idempotent, chạy mỗi lần start).
+    /// Không xóa FK / phiếu — chỉ đổi nhãn hiển thị và một số note.
+    /// Dùng 2 pha tạm (tmp-*) rồi tên cuối để tránh lỗi unique index khi đổi tên hàng loạt.
+    /// </summary>
+    private static async Task RefreshPharmacyDomainLabelsAsync(ApplicationDbContext db)
+    {
+        // Roles (chỉ Description)
+        var roleUpdates = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [AppRoles.Admin] = "Quản trị hệ thống kho dược bệnh viện",
+            [AppRoles.Manager] = "Trưởng khoa / quản lý kho dược",
+            [AppRoles.Staff] = "Dược sĩ / nhân viên kho thuốc",
+            [AppRoles.Customer] = "Khoa/phòng nhận thuốc hoặc cổng nhà thuốc BV"
+        };
+        foreach (var role in await db.Roles.ToListAsync())
+        {
+            if (roleUpdates.TryGetValue(role.Name, out var desc))
+                role.Description = desc;
+        }
+
+        await db.SaveChangesAsync();
+
+        // --- Pha 1: tên tạm duy nhất ---
+        var categories = await db.Categories.OrderBy(x => x.Id).ToListAsync();
+        for (var i = 0; i < categories.Count; i++)
+            categories[i].Name = $"tmp-cat-{categories[i].Id}";
+
+        var units = await db.Units.OrderBy(x => x.Id).ToListAsync();
+        for (var i = 0; i < units.Count; i++)
+        {
+            units[i].Name = $"tmp-unit-{units[i].Id}";
+            units[i].Symbol = $"t{units[i].Id}"; // Symbol cũng unique → đổi tạm trước
+        }
+
+        var warehouses = await db.Warehouses.OrderBy(x => x.Id).ToListAsync();
+        for (var i = 0; i < warehouses.Count; i++)
+            warehouses[i].Name = $"tmp-wh-{warehouses[i].Id}";
+
+        var suppliers = await db.Suppliers.OrderBy(x => x.Id).ToListAsync();
+        for (var i = 0; i < suppliers.Count; i++)
+        {
+            suppliers[i].Name = $"tmp-sup-{suppliers[i].Id}";
+            suppliers[i].Email = $"tmp.sup.{suppliers[i].Id}@pharma.vn";
+        }
+
+        var customers = await db.Customers.OrderBy(x => x.Id).ToListAsync();
+        for (var i = 0; i < customers.Count; i++)
+        {
+            customers[i].Name = $"tmp-cus-{customers[i].Id}";
+            customers[i].Email = $"tmp.cus.{customers[i].Id}@bv-demo.vn";
+        }
+
+        // Products: tên tạm để tránh đụng unique (nếu sau này thêm) + chuẩn bị remap
+        var products = await db.Products.OrderBy(x => x.Id).ToListAsync();
+        for (var i = 0; i < products.Count; i++)
+            products[i].Name = $"tmp-sp-{products[i].Id}";
+
+        var staffLike = await db.Users
+            .Where(x => x.Username.StartsWith("nv") || x.Username.StartsWith("kh"))
+            .ToListAsync();
+        foreach (var u in staffLike)
+            u.Email = $"tmp.{u.Username}@bv-demo.local";
+
+        await db.SaveChangesAsync();
+
+        // --- Pha 2: tên kho dược cuối cùng ---
+        for (var i = 0; i < categories.Count; i++)
+        {
+            var n = i + 1;
+            var baseName = CategoryNames[i % CategoryNames.Length];
+            categories[i].Name = Clip($"DM {baseName} {n:D4}", 100);
+            categories[i].Description = Clip($"Nhóm {baseName} — phân loại thuốc/vật tư kho nhà thuốc bệnh viện", 255);
+            categories[i].IsActive = true;
+        }
+
+        var unitDefs = PharmacyUnitDefs;
+        var usedSymbols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < units.Count; i++)
+        {
+            var n = i + 1;
+            var def = unitDefs[i % unitDefs.Length];
+            var symbol = n <= unitDefs.Length ? def.Symbol : $"u{n:D4}";
+            if (!usedSymbols.Add(symbol))
+                symbol = $"u{n:D4}";
+            units[i].Name = Clip(n <= unitDefs.Length ? def.Name : $"{def.Name} #{n:D4}", 50);
+            units[i].Symbol = symbol;
+            units[i].Description = Clip($"Đơn vị đóng gói kho dược: {units[i].Name}", 255);
+            units[i].IsActive = true;
+        }
+
+        for (var i = 0; i < warehouses.Count; i++)
+        {
+            var n = i + 1;
+            var city = Cities[i % Cities.Length];
+            var code = string.IsNullOrWhiteSpace(warehouses[i].Code) ? $"WH{n:D4}" : warehouses[i].Code;
+            warehouses[i].Name = Clip(n switch
+            {
+                1 => $"Kho thuốc trung tâm BV {city}",
+                2 => $"Kho lạnh vắc xin / sinh phẩm {city}",
+                3 => $"Kho gây nghiện hướng thần {city}",
+                4 => $"Kho vật tư y tế tiêu hao {city}",
+                5 => $"Kho khoa dược lâm sàng {city}",
+                _ => $"Kho dược {city} {code}"
+            }, 150);
+            warehouses[i].Note = (n % 5) switch
+            {
+                0 => "Kho lạnh 2-8°C (vắc xin, insulin)",
+                1 => "Kho thuốc gây nghiện / hướng thần — kiểm soát đặc biệt",
+                2 => "Kho vật tư vô trùng",
+                3 => "Kho cấp cứu 24/7",
+                _ => "Kho thuốc thường — nhiệt độ phòng"
+            };
+        }
+
+        for (var i = 0; i < suppliers.Count; i++)
+        {
+            var n = i + 1;
+            var city = Cities[i % Cities.Length];
+            var baseSup = PharmaSupplierBases[i % PharmaSupplierBases.Length];
+            suppliers[i].Name = Clip($"NCC {baseSup} · {city} #{n:D4}", 150);
+            suppliers[i].Email = $"ncc.duoc{n:D4}@pharma.vn";
+            suppliers[i].Note = "Nhà cung cấp thuốc / vật tư y tế cho bệnh viện";
+        }
+
+        // Chỉ 1 Customer gắn user "customer1" được giữ email/tên demo cố định.
+        var portalCustomerUserId = await db.Users
+            .Where(x => x.Username == "customer1")
+            .Select(x => (int?)x.Id)
+            .FirstOrDefaultAsync();
+
+        for (var i = 0; i < customers.Count; i++)
+        {
+            var n = i + 1;
+            var city = Cities[i % Cities.Length];
+            var dept = HospitalDepartments[i % HospitalDepartments.Length];
+            if (portalCustomerUserId is not null && customers[i].UserId == portalCustomerUserId)
+            {
+                customers[i].Name = "Khoa Nội tổng hợp — Bệnh viện Đa khoa Demo";
+                customers[i].ContactName = "Phạm Điều Dưỡng trưởng";
+                customers[i].Email = "khoa.noi@bv-demo.vn";
+            }
+            else
+            {
+                customers[i].Name = Clip($"{dept} · BV {city} #{n:D4}", 150);
+                customers[i].Email = $"khoa{n:D4}@bv-demo.vn";
+            }
+
+            customers[i].Note = "Khoa/phòng nhận thuốc hoặc nhà thuốc vệ tinh trong bệnh viện";
+        }
+
+        // Products: gắn catalog thuốc/VT y tế.
+        // Pass 1: SKU chuẩn SP0001…SP0500. Pass 2: SKU lệch (SP-001, …) lấy slot catalog còn trống.
+        var catalog = PharmacyProductCatalog.All;
+        var usedCatalogIdx = new HashSet<int>();
+        var usedProductNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        static bool TryCanonicalSkuIndex(string? sku, int catalogCount, out int idx)
+        {
+            idx = -1;
+            if (string.IsNullOrEmpty(sku) || sku.Length != 6 ||
+                !sku.StartsWith("SP", StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (!char.IsDigit(sku[2]) || !char.IsDigit(sku[3]) || !char.IsDigit(sku[4]) || !char.IsDigit(sku[5]))
+                return false;
+            if (!int.TryParse(sku.AsSpan(2), out var skuNum) || skuNum < 1 || skuNum > catalogCount)
+                return false;
+            idx = skuNum - 1;
+            return true;
+        }
+
+        void ApplyCatalog(Product product, int idx)
+        {
+            var item = catalog[idx % catalog.Count];
+            var name = item.Name;
+            if (!usedProductNames.Add(name))
+            {
+                name = Clip($"{item.Name} [{product.Sku}]", 150);
+                usedProductNames.Add(name);
+            }
+
+            product.Name = Clip(name, 150);
+            product.Description = Clip(
+                $"{item.Name} — thuốc/vật tư kho dược bệnh viện (SKU {product.Sku})", 1000);
+            product.Price = item.Price;
+            product.IsActive = true;
+
+            if (categories.Count > 0)
+                product.CategoryId = categories[item.CategoryIndex % categories.Count].Id;
+            if (units.Count > 0)
+                product.UnitId = units[idx % units.Count].Id;
+        }
+
+        var orphans = new List<(Product Product, int Ordinal)>();
+        for (var i = 0; i < products.Count; i++)
+        {
+            if (TryCanonicalSkuIndex(products[i].Sku, catalog.Count, out var idx))
+            {
+                usedCatalogIdx.Add(idx);
+                ApplyCatalog(products[i], idx);
+            }
+            else
+            {
+                orphans.Add((products[i], i));
+            }
+        }
+
+        foreach (var (product, ordinal) in orphans)
+        {
+            var idx = -1;
+            for (var k = 0; k < catalog.Count; k++)
+            {
+                var cand = (ordinal + k) % catalog.Count;
+                if (usedCatalogIdx.Add(cand))
+                {
+                    idx = cand;
+                    break;
+                }
+            }
+
+            if (idx < 0)
+                idx = ordinal % catalog.Count;
+            ApplyCatalog(product, idx);
+        }
+
+        foreach (var u in staffLike)
+        {
+            if (u.Username.StartsWith("nv", StringComparison.OrdinalIgnoreCase))
+                u.Email = $"{u.Username}@bv-duoc.local";
+            else if (u.Username.StartsWith("kh", StringComparison.OrdinalIgnoreCase))
+                u.Email = $"{u.Username}@bv-demo.vn";
+        }
+
+        await db.SaveChangesAsync();
     }
 
     /// <summary>
@@ -103,6 +430,7 @@ public static class DataSeeder
         var existingSkus = (await db.Products.AsNoTracking().Select(x => x.Sku).ToListAsync())
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+        var catalog = PharmacyProductCatalog.All;
         var products = new List<Product>();
         for (var i = 1; i <= Target; i++)
         {
@@ -110,20 +438,21 @@ public static class DataSeeder
             if (existingSkus.Contains(sku))
                 continue;
 
-            var baseName = ProductBases[(i - 1) % ProductBases.Length];
-            var batch = (i - 1) / ProductBases.Length;
-            var name = batch == 0 ? baseName : $"{baseName} lo {batch + 1}";
+            var item = catalog[(i - 1) % catalog.Count];
+            // Ưu tiên category theo nhóm thuốc trong catalog; fallback quay vòng nếu thiếu.
+            var catIdx = item.CategoryIndex % categories.Count;
+            var unitIdx = (i - 1) % units.Count;
 
             products.Add(new Product
             {
                 Sku = sku,
-                Name = name,
-                Description = $"{name} - hang demo tieu dung (SKU {sku})",
-                Price = 5000 + (i * 137) % 500000,
+                Name = Clip(item.Name, 150),
+                Description = Clip($"{item.Name} — thuốc/vật tư kho dược bệnh viện (SKU {sku})", 1000),
+                Price = item.Price,
                 MinStock = 5 + (i % 20),
-                CategoryId = categories[(i - 1) % categories.Count].Id,
-                UnitId = units[(i - 1) % units.Count].Id,
-                IsActive = i % 21 != 0
+                CategoryId = categories[catIdx].Id,
+                UnitId = units[unitIdx].Id,
+                IsActive = true
             });
         }
 
@@ -146,7 +475,7 @@ public static class DataSeeder
             images.Add(new ProductImage
             {
                 ProductId = p.Id,
-                ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-1.png",
+                ImageUrl = $"/uploads/products/pharma-{p.Sku.ToLowerInvariant()}-1.jpg",
                 SortOrder = 0,
                 IsPrimary = true
             });
@@ -156,7 +485,7 @@ public static class DataSeeder
                 images.Add(new ProductImage
                 {
                     ProductId = p.Id,
-                    ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-2.png",
+                    ImageUrl = $"/uploads/products/pharma-{p.Sku.ToLowerInvariant()}-2.jpg",
                     SortOrder = 1,
                     IsPrimary = false
                 });
@@ -168,9 +497,8 @@ public static class DataSeeder
     }
 
     /// <summary>
-    /// Đảm bảo mọi Product có ≥1 ảnh primary trong DB và file trên đĩa là PNG demo nhìn thấy được
-    /// (thay placeholder 1×1 trước đây khiến UI hiện ô trống / vỡ ảnh).
-    /// Template: wwwroot/uploads/products/templates/pack-00.png … pack-23.png
+    /// Đảm bảo mọi Product có ≥1 ảnh primary và file trên đĩa khớp nhóm thuốc
+    /// (ảnh Wikimedia Commons / stock theo CategoryIndex — không scrape Google).
     /// </summary>
     private static async Task EnsureProductImagesReadyAsync(ApplicationDbContext db, string contentRoot)
     {
@@ -180,11 +508,32 @@ public static class DataSeeder
         Directory.CreateDirectory(productDir);
         Directory.CreateDirectory(templateDir);
 
-        var templates = Directory.Exists(templateDir)
+        // Tải / cache ảnh theo 30 nhóm thuốc
+        await PharmacyImageSources.EnsureCategoryTemplatesAsync(templateDir);
+
+        var packFallback = Directory.Exists(templateDir)
             ? Directory.GetFiles(templateDir, "pack-*.png").OrderBy(x => x, StringComparer.Ordinal).ToArray()
             : [];
 
-        // ----- 1) DB: mọi sản phẩm có ít nhất 1 ảnh primary -----
+        // Map SKU / tên → CategoryIndex trong catalog thuốc
+        var catalog = PharmacyProductCatalog.All;
+        int CategoryOf(Product p)
+        {
+            var sku = p.Sku ?? string.Empty;
+            if (sku.Length == 6 && sku.StartsWith("SP", StringComparison.OrdinalIgnoreCase) &&
+                int.TryParse(sku.AsSpan(2), out var n) && n >= 1 && n <= catalog.Count)
+                return catalog[n - 1].CategoryIndex;
+
+            var byName = catalog.FirstOrDefault(x =>
+                p.Name.StartsWith(x.Name, StringComparison.OrdinalIgnoreCase) ||
+                x.Name.StartsWith(p.Name.Split(' ')[0], StringComparison.OrdinalIgnoreCase));
+            if (!string.IsNullOrEmpty(byName.Name))
+                return byName.CategoryIndex;
+
+            return Math.Abs(HashCode.Combine(p.Sku?.ToLowerInvariant())) % PharmacyImageSources.CategoryQueries.Length;
+        }
+
+        // ----- 1) DB: mọi SP có ảnh primary; chuẩn hoá URL pharma-*.jpg (bỏ demo-* cũ) -----
         var products = await db.Products
             .Include(x => x.Images)
             .OrderBy(x => x.Id)
@@ -193,16 +542,36 @@ public static class DataSeeder
         var dbChanged = false;
         foreach (var p in products)
         {
+            var primaryUrl = $"/uploads/products/pharma-{p.Sku.ToLowerInvariant()}-1.jpg";
             if (p.Images.Count == 0)
             {
                 p.Images.Add(new ProductImage
                 {
-                    ImageUrl = $"/uploads/products/demo-{p.Sku.ToLowerInvariant()}-1.png",
+                    ImageUrl = primaryUrl,
                     SortOrder = 0,
                     IsPrimary = true
                 });
                 dbChanged = true;
                 continue;
+            }
+
+            // Đổi demo-* / .png cũ → pharma-*.jpg (URL mới để tránh cache ảnh người/stock)
+            foreach (var img in p.Images)
+            {
+                var url = img.ImageUrl ?? string.Empty;
+                if (!url.Contains("/uploads/products/", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var updated = url
+                    .Replace("/uploads/products/demo-", "/uploads/products/pharma-", StringComparison.OrdinalIgnoreCase);
+                if (updated.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                    updated = Path.ChangeExtension(updated, ".jpg")!.Replace('\\', '/');
+
+                if (!string.Equals(updated, url, StringComparison.Ordinal))
+                {
+                    img.ImageUrl = updated;
+                    dbChanged = true;
+                }
             }
 
             if (!p.Images.Any(x => x.IsPrimary))
@@ -215,54 +584,78 @@ public static class DataSeeder
         if (dbChanged)
             await db.SaveChangesAsync();
 
-        // ----- 2) Đĩa: tạo/ghi đè file ảnh demo (thiếu hoặc chỉ còn PNG 1×1) -----
-        var urls = await db.ProductImages
-            .AsNoTracking()
-            .Select(x => x.ImageUrl)
-            .Distinct()
-            .ToListAsync();
-
-        // Fallback PNG nhỏ nếu thiếu template (hiếm)
+        // ----- 2) Đĩa: ghi đè file demo theo nhóm thuốc (luôn refresh lần seed) -----
         var tinyFallback = Convert.FromBase64String(
             "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
-        for (var i = 0; i < urls.Count; i++)
+        foreach (var p in products)
         {
-            var url = urls[i];
-            if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            // Không đụng template gốc
-            if (url.Contains("/templates/", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            var fullPath = Path.Combine(
-                webRoot,
-                url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-            var dir = Path.GetDirectoryName(fullPath);
-            if (!string.IsNullOrEmpty(dir))
-                Directory.CreateDirectory(dir);
-
-            var missingOrTiny = !File.Exists(fullPath) || new FileInfo(fullPath).Length < 500;
-            if (!missingOrTiny)
-                continue;
-
-            if (templates.Length > 0)
+            var cat = CategoryOf(p);
+            // Ảnh đúng nhóm thuốc/vật tư (không trộn ảnh không liên quan)
+            var template = PharmacyImageSources.TemplatePathForCategory(templateDir, cat);
+            if (!File.Exists(template) || new FileInfo(template).Length < 3000)
             {
-                var idx = Math.Abs(HashCode.Combine(url.ToLowerInvariant())) % templates.Length;
-                File.Copy(templates[idx], fullPath, overwrite: true);
+                if (packFallback.Length > 0)
+                    template = packFallback[cat % packFallback.Length];
+                else
+                    template = string.Empty;
             }
-            else
+
+            foreach (var img in p.Images)
             {
-                await File.WriteAllBytesAsync(fullPath, tinyFallback);
+                var url = img.ImageUrl;
+                if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (url.Contains("/templates/", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var fullPath = Path.Combine(
+                    webRoot,
+                    url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+                var dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+
+                // Ảnh phụ: nhóm thuốc liền kề (vẫn trong catalog dược), không lấy ảnh bẩn
+                var src = template;
+                if (!img.IsPrimary)
+                {
+                    var alt = PharmacyImageSources.TemplatePathForCategory(templateDir, cat + 1);
+                    if (File.Exists(alt) && new FileInfo(alt).Length >= 3000)
+                        src = alt;
+                }
+
+                if (!string.IsNullOrEmpty(src) && File.Exists(src))
+                    File.Copy(src, fullPath, overwrite: true);
+                else if (!File.Exists(fullPath) || new FileInfo(fullPath).Length < 500)
+                    await File.WriteAllBytesAsync(fullPath, tinyFallback);
+
+                // Xoá file .png demo cũ nếu còn
+                if (fullPath.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
+                {
+                    var legacyPng = Path.ChangeExtension(fullPath, ".png");
+                    if (legacyPng is not null && File.Exists(legacyPng))
+                    {
+                        try { File.Delete(legacyPng); } catch { /* ignore */ }
+                    }
+                }
             }
+        }
+
+        // Xoá hẳn file demo-* cũ (ảnh stock người từng bị cache trên URL này)
+        foreach (var legacy in Directory.EnumerateFiles(productDir, "demo-*.jpg"))
+        {
+            try { File.Delete(legacy); } catch { /* ignore */ }
+        }
+
+        foreach (var legacy in Directory.EnumerateFiles(productDir, "demo-*.png"))
+        {
+            try { File.Delete(legacy); } catch { /* ignore */ }
         }
     }
 
-    // -------------------------------------------------------------------------
     // Roles + tài khoản đăng nhập cố định (admin / manager / staff / customer1)
-    // -------------------------------------------------------------------------
     /// <summary>
     /// Tạo 4 role hệ thống và các user đăng nhập demo (kèm 1 Customer gắn customer1).
     /// </summary>
@@ -270,10 +663,10 @@ public static class DataSeeder
     {
         var roles = new (string Name, string Description)[]
         {
-            (AppRoles.Admin, "Quản trị toàn bộ hệ thống"),
-            (AppRoles.Manager, "Quản lý kho"),
-            (AppRoles.Staff, "Nhân viên kho"),
-            (AppRoles.Customer, "Tài khoản khách hàng")
+            (AppRoles.Admin, "Quản trị hệ thống kho dược bệnh viện"),
+            (AppRoles.Manager, "Trưởng khoa / quản lý kho dược"),
+            (AppRoles.Staff, "Dược sĩ / nhân viên kho thuốc"),
+            (AppRoles.Customer, "Khoa/phòng nhận thuốc hoặc cổng nhà thuốc BV")
         };
 
         foreach (var (name, description) in roles)
@@ -289,33 +682,56 @@ public static class DataSeeder
         var staffRole = await db.Roles.FirstAsync(x => x.Name == AppRoles.Staff);
         var customerRole = await db.Roles.FirstAsync(x => x.Name == AppRoles.Customer);
 
-        await EnsureUserAsync(db, "admin", DemoPassword, "Nguyễn Quản Trị", "admin@warehouse.local", adminRole.Id, "0901000001");
-        await EnsureUserAsync(db, "manager", DemoPassword, "Trần Quản Lý Kho", "manager@warehouse.local", managerRole.Id, "0901000002");
-        await EnsureUserAsync(db, "staff", DemoPassword, "Lê Nhân Viên Kho", "staff@warehouse.local", staffRole.Id, "0901000003");
+        await EnsureUserAsync(db, "admin", DemoPassword, "Nguyễn Quản Trị Dược", "admin@bv-duoc.local", adminRole.Id, "0901000001");
+        await EnsureUserAsync(db, "manager", DemoPassword, "Trần Trưởng Khoa Dược", "manager@bv-duoc.local", managerRole.Id, "0901000002");
+        await EnsureUserAsync(db, "staff", DemoPassword, "Lê Dược sĩ Kho", "staff@bv-duoc.local", staffRole.Id, "0901000003");
 
         var customerUser = await EnsureUserAsync(
-            db, "customer1", DemoPassword, "Phạm Khách Hàng", "customer1@email.com", customerRole.Id, "0909000111");
+            db, "customer1", DemoPassword, "Phạm Điều Dưỡng trưởng", "customer1@bv-demo.vn", customerRole.Id, "0909000111");
 
-        if (!await db.Customers.AnyAsync(x => x.UserId == customerUser.Id))
+        const string demoDeptEmail = "khoa.noi@bv-demo.vn";
+        const string demoDeptName = "Khoa Nội tổng hợp — Bệnh viện Đa khoa Demo";
+
+        var linkedCustomer = await db.Customers.FirstOrDefaultAsync(x => x.UserId == customerUser.Id);
+
+        // Name/Email unique: nhường slot cho Customer gắn portal customer1.
+        // Lưu ý: UserId NULL không khớp `!= id` trong SQL → phải OR HasValue==false.
+        foreach (var other in await db.Customers
+                     .Where(x => (x.UserId == null || x.UserId != customerUser.Id) &&
+                                 (x.Email == demoDeptEmail || x.Name == demoDeptName))
+                     .ToListAsync())
+        {
+            other.Name = Clip($"Khoa demo (legacy #{other.Id})", 150);
+            other.Email = $"khoa.legacy.{other.Id}@bv-demo.vn";
+        }
+
+        if (linkedCustomer is null)
         {
             db.Customers.Add(new Customer
             {
-                Name = "Công ty TNHH Demo Retail",
-                ContactName = "Phạm Khách Hàng",
-                Email = "customer1@email.com",
+                Name = demoDeptName,
+                ContactName = "Phạm Điều Dưỡng trưởng",
+                Email = demoDeptEmail,
                 Phone = "0909000111",
                 Address = "123 Nguyễn Trãi, Thanh Xuân, Hà Nội",
                 TaxCode = "0101234567",
+                Note = "Khoa/phòng nhận thuốc trong bệnh viện",
                 IsActive = true,
                 UserId = customerUser.Id
             });
-            await db.SaveChangesAsync();
         }
+        else
+        {
+            linkedCustomer.Name = demoDeptName;
+            linkedCustomer.ContactName = "Phạm Điều Dưỡng trưởng";
+            linkedCustomer.Email = demoDeptEmail;
+            linkedCustomer.Note = "Khoa/phòng nhận thuốc trong bệnh viện";
+        }
+
+        await db.SaveChangesAsync();
     }
 
-    // -------------------------------------------------------------------------
     // Target bản ghi / bảng nghiệp vụ — idempotent top-up (có thể chạy lại)
-    // -------------------------------------------------------------------------
     /// <summary>
     /// dữ liệu demo Categories → Units → Warehouses → Suppliers → Users →
     /// Customers → Products → Stocks → Import/Export/Stocktake + StockTransactions.
@@ -337,14 +753,14 @@ public static class DataSeeder
             for (var i = 1; list.Count < need && i < 100_000; i++)
             {
                 var baseName = CategoryNames[(i - 1) % CategoryNames.Length];
-                var name = $"DM {baseName} {i:D4}";
+                var name = Clip($"DM {baseName} {i:D4}", 100);
                 if (!set.Add(name))
                     continue;
 
                 list.Add(new Category
                 {
                     Name = name,
-                    Description = $"Danh mục {name} phục vụ quản lý kho phân phối",
+                    Description = Clip($"Nhóm {baseName} — phân loại thuốc/vật tư kho nhà thuốc bệnh viện", 255),
                     IsActive = i % 17 != 0
                 });
             }
@@ -359,16 +775,7 @@ public static class DataSeeder
         // ----- Units -----
         if (await db.Units.CountAsync() < Target)
         {
-            var unitDefs = new (string Name, string Symbol)[]
-            {
-                ("Kilogram", "kg"), ("Gram", "g"), ("Tấn", "tan"), ("Yến", "yen"),
-                ("Lít", "l"), ("Mililít", "ml"), ("Mét", "m"), ("Centimet", "cm"),
-                ("Cái", "cai"), ("Chiếc", "chiec"), ("Bộ", "bo"), ("Hộp", "hop"),
-                ("Thùng", "thung"), ("Chai", "chai"), ("Lon", "lon"), ("Bao", "bao"),
-                ("Gói", "goi"), ("Vỉ", "vi"), ("Cuộn", "cuon"), ("Tờ", "to"),
-                ("Đôi", "doi"), ("Bình", "binh"), ("Can", "can"), ("Thùng 12", "th12"),
-                ("Thùng 24", "th24"), ("Lốc 6", "loc6"), ("Lốc 10", "loc10")
-            };
+            var unitDefs = PharmacyUnitDefs;
 
             var symbolSet = (await db.Units.Select(x => x.Symbol).ToListAsync())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -390,7 +797,7 @@ public static class DataSeeder
                 }
                 else
                 {
-                    name = $"Don vi dong goi {i:D4}";
+                    name = $"Đơn vị đóng gói dược {i:D4}";
                     symbol = $"u{i:D4}";
                 }
 
@@ -399,9 +806,9 @@ public static class DataSeeder
 
                 list.Add(new Unit
                 {
-                    Name = name,
+                    Name = Clip(name, 50),
                     Symbol = symbol,
-                    Description = $"Đơn vị {name}",
+                    Description = Clip($"Đơn vị đóng gói kho dược: {name}", 255),
                     IsActive = i % 11 != 0 || i <= unitDefs.Length
                 });
             }
@@ -430,9 +837,27 @@ public static class DataSeeder
                     continue;
 
                 var city = Cities[(i - 1) % Cities.Length];
-                var name = $"Kho demo {city} {code}";
+                // Một số kho mang tên khu vực nghiệp vụ dược; phần còn lại gắn mã + thành phố.
+                var name = i switch
+                {
+                    1 => $"Kho thuốc trung tâm BV {city}",
+                    2 => $"Kho lạnh vắc xin / sinh phẩm {city}",
+                    3 => $"Kho gây nghiện hướng thần {city}",
+                    4 => $"Kho vật tư y tế tiêu hao {city}",
+                    5 => $"Kho khoa dược lâm sàng {city}",
+                    _ => $"Kho dược {city} {code}"
+                };
                 if (!nameSet.Add(name))
                     continue;
+
+                var note = (i % 5) switch
+                {
+                    0 => "Kho lạnh 2-8°C (vắc xin, insulin)",
+                    1 => "Kho thuốc gây nghiện / hướng thần — kiểm soát đặc biệt",
+                    2 => "Kho vật tư vô trùng",
+                    3 => "Kho cấp cứu 24/7",
+                    _ => "Kho thuốc thường — nhiệt độ phòng"
+                };
 
                 list.Add(new Warehouse
                 {
@@ -441,7 +866,7 @@ public static class DataSeeder
                     Address = $"{50 + i} {Streets[(i - 1) % Streets.Length]}, {city}",
                     Phone = $"09{(i % 100_000_000):D8}"[..10],
                     ManagerName = PersonName(i),
-                    Note = i % 5 == 0 ? "Kho lạnh" : "Kho thường",
+                    Note = note,
                     IsActive = i % 19 != 0
                 });
             }
@@ -463,7 +888,8 @@ public static class DataSeeder
             for (var i = 1; list.Count < need && i < 100_000; i++)
             {
                 var city = Cities[(i - 1) % Cities.Length];
-                var name = $"NCC demo {city} {i:D4}";
+                var baseSup = PharmaSupplierBases[(i - 1) % PharmaSupplierBases.Length];
+                var name = Clip($"NCC {baseSup} · {city} #{i:D4}", 150);
                 if (!nameSet.Add(name))
                     continue;
 
@@ -472,10 +898,10 @@ public static class DataSeeder
                     Name = name,
                     ContactName = PersonName(i + 7),
                     Phone = $"08{(i % 100_000_000):D8}"[..10],
-                    Email = $"nccdemo{i:D4}@supply.vn",
+                    Email = $"ncc.duoc{i:D4}@pharma.vn",
                     Address = $"{100 + i} {Streets[i % Streets.Length]}, {city}",
                     TaxCode = $"1{100000000 + i}",
-                    Note = "Nha cung cap phan phoi hang tieu dung",
+                    Note = "Nhà cung cấp thuốc / vật tư y tế cho bệnh viện",
                     IsActive = i % 13 != 0
                 });
             }
@@ -506,7 +932,7 @@ public static class DataSeeder
                         Username = $"nv{n:D3}",
                         PasswordHash = PasswordHasher.HashPassword(DemoPassword),
                         FullName = PersonName(n),
-                        Email = $"nv{n:D3}@warehouse.local",
+                        Email = $"nv{n:D3}@bv-duoc.local",
                         Phone = $"0902{n:D6}"[..10],
                         RoleId = roleId,
                         IsActive = true
@@ -560,7 +986,9 @@ public static class DataSeeder
             for (var i = have + 1; i <= Target; i++)
             {
                 var city = Cities[(i - 1) % Cities.Length];
-                var name = $"Sieu thi / Dai ly {city} {i:D4}";
+                var dept = HospitalDepartments[(i - 1) % HospitalDepartments.Length];
+                // "Khách hàng" trong ngữ cảnh bệnh viện = khoa/phòng nhận thuốc hoặc nhà thuốc vệ tinh.
+                var name = Clip($"{dept} · BV {city} #{i:D4}", 150);
                 if (!nameSet.Add(name))
                     continue;
 
@@ -576,10 +1004,10 @@ public static class DataSeeder
                     Name = name,
                     ContactName = PersonName(i + 11),
                     Phone = $"09{40 + (i % 50):D2}{(i % 1_000_000):D6}"[..10],
-                    Email = $"daily{i:D4}@retail.vn",
+                    Email = $"khoa{i:D4}@bv-demo.vn",
                     Address = $"{200 + i} {Streets[i % Streets.Length]}, {city}",
                     TaxCode = $"2{200000000 + i}",
-                    Note = "Khach hang ban le / phan phoi",
+                    Note = "Khoa/phòng nhận thuốc hoặc nhà thuốc vệ tinh trong bệnh viện",
                     IsActive = i % 15 != 0,
                     UserId = userId
                 });
@@ -687,30 +1115,42 @@ public static class DataSeeder
                 var wh = warehouses[(i - 1) % warehouses.Count];
                 var sup = suppliers[(i - 1) % suppliers.Count];
                 var p1 = productsAll[(i - 1) % productsAll.Count];
-                var p2 = productsAll[i % productsAll.Count];
 
-                var details = new List<ImportReceiptDetail>
+                // Phiếu nhập thực tế: nhiều dòng thuốc cùng lúc (2–4 sản phẩm).
+                var details = new List<ImportReceiptDetail>();
+                var lineCount = 2 + (i % 3);
+                for (var d = 0; d < lineCount; d++)
                 {
-                    new()
+                    var p = productsAll[(i - 1 + d * 7) % productsAll.Count];
+                    if (details.Any(x => x.ProductId == p.Id))
+                        continue;
+                    var qty = 10 + ((i + d) % 40);
+                    var price = Math.Round(p.Price * 0.7m, 0);
+                    details.Add(new ImportReceiptDetail
                     {
-                        ProductId = p1.Id,
-                        Quantity = 10 + (i % 40),
-                        UnitPrice = p1.Price * 0.7m,
-                        LineTotal = Math.Round((10 + (i % 40)) * p1.Price * 0.7m, 2),
-                        Note = "Dong nhap chinh"
-                    }
-                };
+                        ProductId = p.Id,
+                        Quantity = qty,
+                        UnitPrice = price,
+                        LineTotal = Math.Round(qty * price, 2),
+                        Note = d == 0 ? "Dòng nhập chính" : null
+                    });
+                }
 
-                if (p2.Id != p1.Id && i % 2 == 0)
+                if (details.Count == 0)
                 {
                     details.Add(new ImportReceiptDetail
                     {
-                        ProductId = p2.Id,
-                        Quantity = 5 + (i % 15),
-                        UnitPrice = p2.Price * 0.75m,
-                        LineTotal = Math.Round((5 + (i % 15)) * p2.Price * 0.75m, 2)
+                        ProductId = p1.Id,
+                        Quantity = 10,
+                        UnitPrice = Math.Round(p1.Price * 0.7m, 0),
+                        LineTotal = Math.Round(10 * p1.Price * 0.7m, 2)
                     });
                 }
+
+                var goods = details.Sum(d => d.LineTotal);
+                var shipping = 50_000m + (i % 7) * 10_000m;
+                var discount = Math.Round(goods * ((i % 5) * 0.01m), 0);
+                var tax = Math.Round(goods * 0.05m, 0); // thuế không hoàn lại demo 5%
 
                 receipts.Add(new ImportReceipt
                 {
@@ -719,7 +1159,11 @@ public static class DataSeeder
                     WarehouseId = wh.Id,
                     SupplierId = sup.Id,
                     Status = status,
-                    Note = $"Phieu nhap hang tu {sup.Name}",
+                    Note = $"Nhập thuốc từ {Clip(sup.Name, 80)}",
+                    ShippingFee = shipping,
+                    TradeDiscount = discount,
+                    NonRefundableTax = tax,
+                    PurchaseInvoiceCode = status == ImportReceiptStatus.Confirmed ? $"HDN-SEED-{i:D4}" : null,
                     ConfirmedAt = status == ImportReceiptStatus.Confirmed ? DateTime.UtcNow.AddDays(-Target + i) : null,
                     CancelledAt = status == ImportReceiptStatus.Cancelled ? DateTime.UtcNow.AddDays(-Target + i + 1) : null,
                     Details = details
@@ -782,7 +1226,25 @@ public static class DataSeeder
 
                 var wh = warehouses[(i - 1) % warehouses.Count];
                 var cus = customers[(i - 1) % customers.Count];
-                var p1 = productsAll[(i - 1) % productsAll.Count];
+
+                // Xuất nhiều thuốc cùng phiếu (cấp phát khoa/phòng).
+                var exportDetails = new List<ExportReceiptDetail>();
+                var exportLines = 2 + (i % 3);
+                for (var d = 0; d < exportLines; d++)
+                {
+                    var p = productsAll[(i + d * 11) % productsAll.Count];
+                    if (exportDetails.Any(x => x.ProductId == p.Id))
+                        continue;
+                    var qty = 1 + ((i + d) % 10);
+                    exportDetails.Add(new ExportReceiptDetail
+                    {
+                        ProductId = p.Id,
+                        Quantity = qty,
+                        UnitPrice = p.Price,
+                        LineTotal = Math.Round(qty * p.Price, 2),
+                        Note = d == 0 ? "Cấp phát theo yêu cầu khoa" : null
+                    });
+                }
 
                 receipts.Add(new ExportReceipt
                 {
@@ -791,20 +1253,10 @@ public static class DataSeeder
                     WarehouseId = wh.Id,
                     CustomerId = cus.Id,
                     Status = status,
-                    Note = $"Xuat ban cho {cus.Name}",
+                    Note = $"Xuất cấp phát cho {Clip(cus.Name, 80)}",
                     ConfirmedAt = status == ExportReceiptStatus.Confirmed ? DateTime.UtcNow.AddDays(-Target + i + 2) : null,
                     CancelledAt = status == ExportReceiptStatus.Cancelled ? DateTime.UtcNow.AddDays(-Target + i + 3) : null,
-                    Details =
-                    [
-                        new ExportReceiptDetail
-                        {
-                            ProductId = p1.Id,
-                            Quantity = 1 + (i % 10),
-                            UnitPrice = p1.Price,
-                            LineTotal = Math.Round((1 + (i % 10)) * p1.Price, 2),
-                            Note = "Xuat theo don"
-                        }
-                    ]
+                    Details = exportDetails
                 });
             }
 
@@ -927,6 +1379,9 @@ public static class DataSeeder
     /// <summary>
     /// Ghép họ + tên đệm + tên từ seed số (ổn định, tái lập được).
     /// </summary>
+    private static string Clip(string value, int maxLen)
+        => string.IsNullOrEmpty(value) || value.Length <= maxLen ? value : value[..maxLen];
+
     private static string PersonName(int seed)
     {
         var ln = LastNames[Math.Abs(seed) % LastNames.Length];
@@ -949,7 +1404,16 @@ public static class DataSeeder
     {
         var user = await db.Users.FirstOrDefaultAsync(x => x.Username == username);
         if (user is not null)
+        {
+            // Đồng bộ hồ sơ demo sang ngữ cảnh kho dược (không đổi username/password).
+            user.FullName = fullName;
+            user.Email = email;
+            user.Phone = phone;
+            user.RoleId = roleId;
+            user.IsActive = true;
+            await db.SaveChangesAsync();
             return user;
+        }
 
         user = new User
         {

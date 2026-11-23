@@ -16,6 +16,18 @@ public class ImportReceipt : BaseEntity
     public ImportReceiptStatus Status { get; set; } = ImportReceiptStatus.Draft; // Trạng thái nghiệp vụ phiếu
     public string? Note { get; set; } // Ghi chú phiếu nhập
 
+    /// <summary>Chi phí vận chuyển (cộng vào tổng thanh toán).</summary>
+    public decimal ShippingFee { get; set; }
+
+    /// <summary>Chiết khấu thương mại (trừ khỏi giá mua hàng).</summary>
+    public decimal TradeDiscount { get; set; }
+
+    /// <summary>Thuế không được hoàn lại (cộng vào tổng thanh toán).</summary>
+    public decimal NonRefundableTax { get; set; }
+
+    /// <summary>Mã hóa đơn mua hàng phát hành khi xác nhận (HDN-…).</summary>
+    public string? PurchaseInvoiceCode { get; set; }
+
     public DateTime? ConfirmedAt { get; set; } // Thời điểm xác nhận (cộng tồn)
     public DateTime? CancelledAt { get; set; } // Thời điểm hủy phiếu
 

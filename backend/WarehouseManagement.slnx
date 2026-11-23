@@ -6,4 +6,7 @@
     <Project Path="src/WarehouseManagement.Shared/WarehouseManagement.Shared.csproj" />
     <Project Path="src/WarehouseManagement.WebAPI/WarehouseManagement.WebAPI.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/WarehouseManagement.PerformanceTests/WarehouseManagement.PerformanceTests.csproj" />
+  </Folder>
 </Solution>

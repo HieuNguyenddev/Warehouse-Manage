@@ -318,8 +318,8 @@ export function ProductsPage() {
   return (
     <Box>
       <PageHeader
-        title="Products"
-        subtitle="Bấm dòng để xem chi tiết · khi sửa có thể cập nhật ảnh ngay trong form"
+        title="Thuốc / vật tư"
+        subtitle="Danh mục thuốc & vật tư kho dược · bấm dòng để xem · sửa kèm ảnh"
         icon={<Inventory2Icon color="primary" />}
         actions={
           <Button startIcon={<AddIcon />} onClick={openCreate}>

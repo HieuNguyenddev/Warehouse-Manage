@@ -12,8 +12,8 @@ import type { CategoryDto, RoleDto, SupplierDto, UnitDto, UserDto, WarehouseDto 
 export function RolesPage() {
   return (
     <ResourcePage<RoleDto>
-      title="Roles"
-      subtitle="Vai trò hệ thống"
+      title="Vai trò"
+      subtitle="Phân quyền kho dược bệnh viện"
       icon={<AdminPanelSettingsIcon color="primary" />}
       list={rolesApi.list}
       create={rolesApi.create}
@@ -35,8 +35,8 @@ export function RolesPage() {
 export function UsersPage() {
   return (
     <ResourcePage<UserDto>
-      title="Users"
-      subtitle="Tài khoản nội bộ"
+      title="Người dùng"
+      subtitle="Tài khoản nội bộ khoa dược / kho thuốc"
       icon={<ManageAccountsIcon color="primary" />}
       list={usersApi.list}
       create={usersApi.create}
@@ -79,7 +79,8 @@ export function UsersPage() {
 export function CategoriesPage() {
   return (
     <ResourcePage<CategoryDto>
-      title="Categories"
+      title="Nhóm thuốc"
+      subtitle="Phân nhóm thuốc / vật tư kho nhà thuốc bệnh viện"
       icon={<CategoryIcon color="primary" />}
       list={categoriesApi.list}
       create={categoriesApi.create}
@@ -107,7 +108,8 @@ export function CategoriesPage() {
 export function UnitsPage() {
   return (
     <ResourcePage<UnitDto>
-      title="Units"
+      title="Đơn vị tính"
+      subtitle="Đơn vị đóng gói thuốc / vật tư (viên, vỉ, hộp, ống…)"
       icon={<StraightenIcon color="primary" />}
       list={unitsApi.list}
       create={unitsApi.create}
@@ -136,7 +138,8 @@ export function UnitsPage() {
 export function SuppliersPage() {
   return (
     <ResourcePage<SupplierDto>
-      title="Suppliers"
+      title="NCC dược"
+      subtitle="Nhà cung cấp thuốc và vật tư y tế"
       icon={<LocalShippingIcon color="primary" />}
       list={suppliersApi.list}
       create={suppliersApi.create}
@@ -166,7 +169,8 @@ export function SuppliersPage() {
 export function WarehousesPage() {
   return (
     <ResourcePage<WarehouseDto>
-      title="Warehouses"
+      title="Kho dược"
+      subtitle="Kho thuốc thường / lạnh / gây nghiện / vật tư trong bệnh viện"
       icon={<WarehouseIcon color="primary" />}
       list={warehousesApi.list}
       create={warehousesApi.create}

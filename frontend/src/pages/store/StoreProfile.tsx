@@ -107,7 +107,7 @@ export function StoreProfile() {
     <Box>
       <PageHeader
         title="Tài khoản của tôi"
-        subtitle="Quản lý hồ sơ khách hàng, ảnh đại diện và mật khẩu đăng nhập cửa hàng"
+        subtitle="Hồ sơ khoa/phòng hoặc người nhận thuốc · ảnh đại diện · mật khẩu cổng nhà thuốc BV"
         icon={<PersonIcon color="primary" />}
       />
 

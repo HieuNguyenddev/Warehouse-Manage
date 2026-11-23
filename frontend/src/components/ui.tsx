@@ -56,9 +56,19 @@ export function PageHeader({
   )
 }
 
-export function Alert({ children, ok }: { children: ReactNode; ok?: boolean }) {
+export function Alert({
+  children,
+  ok,
+  severity,
+}: {
+  children: ReactNode
+  ok?: boolean
+  /** info | warning | success | error — mặc định error (ok=true → success) */
+  severity?: 'error' | 'warning' | 'info' | 'success'
+}) {
+  const tone = severity ?? (ok ? 'success' : 'error')
   return (
-    <MuiAlert severity={ok ? 'success' : 'error'} className="mb-3" variant="outlined">
+    <MuiAlert severity={tone} className="mb-3" variant="outlined">
       {children}
     </MuiAlert>
   )
@@ -66,19 +76,40 @@ export function Alert({ children, ok }: { children: ReactNode; ok?: boolean }) {
 
 export function Modal({
   title,
+  subtitle,
   children,
   onClose,
   maxWidth = 'sm',
   icon,
   actions,
+  accent = 'primary',
 }: {
   title: string
+  subtitle?: string
   children: ReactNode
   onClose: () => void
   maxWidth?: 'xs' | 'sm' | 'md' | 'lg'
   icon?: ReactNode
   actions?: ReactNode
+  /** primary | success | warning — màu header wizard nhập/xuất */
+  accent?: 'primary' | 'success' | 'warning'
 }) {
+  const accentMap = {
+    primary: {
+      bg: 'linear-gradient(135deg, #1565C0 0%, #0D47A1 55%, #1976D2 100%)',
+      chip: 'rgba(255,255,255,0.16)',
+    },
+    success: {
+      bg: 'linear-gradient(135deg, #0B6E4F 0%, #0F8A5F 50%, #14965A 100%)',
+      chip: 'rgba(255,255,255,0.16)',
+    },
+    warning: {
+      bg: 'linear-gradient(135deg, #E85D04 0%, #F48C06 55%, #E85D04 100%)',
+      chip: 'rgba(255,255,255,0.18)',
+    },
+  } as const
+  const theme = accentMap[accent]
+
   return (
     <Dialog
       open
@@ -94,21 +125,62 @@ export function Modal({
             maxHeight: '92vh',
             display: 'flex',
             flexDirection: 'column',
-            boxShadow: '0 20px 50px rgba(15, 23, 42, 0.18)',
+            boxShadow: '0 24px 60px rgba(15, 23, 42, 0.22)',
           },
         },
       }}
     >
-      <DialogTitle className="flex items-center gap-2 pr-12" sx={{ flexShrink: 0 }}>
-        {icon}
-        <Typography component="span" variant="h6" sx={{ fontWeight: 700 }}>
-          {title}
-        </Typography>
+      <DialogTitle
+        sx={{
+          flexShrink: 0,
+          m: 0,
+          px: 2.5,
+          py: 2,
+          background: theme.bg,
+          color: '#fff',
+          pr: 6,
+        }}
+      >
+        <Box className="flex items-start gap-2.5">
+          {icon ? (
+            <Box
+              sx={{
+                mt: 0.25,
+                p: 1,
+                borderRadius: 2,
+                bgcolor: theme.chip,
+                display: 'grid',
+                placeItems: 'center',
+                lineHeight: 0,
+                '& .MuiSvgIcon-root': { color: '#fff' },
+              }}
+            >
+              {icon}
+            </Box>
+          ) : null}
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="div" variant="h6" sx={{ fontWeight: 800, lineHeight: 1.25 }}>
+              {title}
+            </Typography>
+            {subtitle ? (
+              <Typography variant="caption" sx={{ opacity: 0.92, display: 'block', mt: 0.35 }}>
+                {subtitle}
+              </Typography>
+            ) : null}
+          </Box>
+        </Box>
         <IconButton
           aria-label="Đóng"
           onClick={onClose}
           size="small"
-          sx={{ position: 'absolute', right: 12, top: 12 }}
+          sx={{
+            position: 'absolute',
+            right: 10,
+            top: 10,
+            color: '#fff',
+            bgcolor: 'rgba(255,255,255,0.12)',
+            '&:hover': { bgcolor: 'rgba(255,255,255,0.22)' },
+          }}
         >
           <CloseIcon fontSize="small" />
         </IconButton>
@@ -116,18 +188,29 @@ export function Modal({
       <DialogContent
         dividers
         sx={{
-          bgcolor: 'grey.50',
+          bgcolor: '#F7F9FC',
           overflowY: 'auto',
           overflowX: 'hidden',
           flex: '1 1 auto',
-          // pt đủ cho floating label OutlinedInput không đè nhau
           pt: 2.5,
+          px: { xs: 2, sm: 2.5 },
         }}
       >
         {children}
       </DialogContent>
       {actions ? (
-        <DialogActions sx={{ px: 3, py: 2, flexShrink: 0, gap: 1, flexWrap: 'wrap' }}>
+        <DialogActions
+          sx={{
+            px: 2.5,
+            py: 1.75,
+            flexShrink: 0,
+            gap: 1,
+            flexWrap: 'wrap',
+            bgcolor: '#fff',
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
           {actions}
         </DialogActions>
       ) : null}

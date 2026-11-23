@@ -73,36 +73,51 @@ public class WarehouseStockService : IWarehouseStockService
     public Task<WarehouseStockResponseDto> CreateAsync(WarehouseStockRequestDto dto)
         => CreateOpeningAsync(dto);
 
-    // Khởi tạo tồn đầu kỳ: chỉ khi chưa có dòng tồn; ghi sổ Manual.
+    // Khởi tạo tồn đầu kỳ: chỉ khi chưa có dòng tồn; ghi sổ Manual (qty > 0).
+    // Qty = 0 vẫn được phép: mở sổ trống (triển khai hệ thống / chuyển kỳ chưa có hàng).
     public async Task<WarehouseStockResponseDto> CreateOpeningAsync(WarehouseStockRequestDto dto)
     {
         await EnsureRefsAsync(dto.WarehouseId, dto.ProductId);
 
-        // Không cho mở tồn lần 2 — phải dùng Adjust
+        // Không cho mở tồn lần 2 — phải dùng Adjust / Nhập / Kiểm kê
         var existing = await _warehouseStockRepository.GetByWarehouseAndProductAsync(dto.WarehouseId, dto.ProductId);
         if (existing is not null)
-            throw new ConflictException("Sản phẩm đã có tồn kho tại kho này. Hãy dùng điều chỉnh tồn.");
+            throw new ConflictException("Sản phẩm đã có tồn kho tại kho này. Hãy dùng điều chỉnh tồn, phiếu nhập hoặc kiểm kê.");
 
         var reason = NormalizeReason(dto.Reason, "Khởi tạo tồn đầu kỳ");
 
-        // Gán tồn tuyệt đối qua StockMovement (tạo dòng + ghi sổ)
-        await _stockMovementService.SetQuantityAsync(
-            dto.WarehouseId,
-            dto.ProductId,
-            dto.Quantity,
-            StockTransactionType.Manual,
-            StockReferenceTypes.WarehouseStock,
-            null,
-            null,
-            reason);
-
-        await _warehouseStockRepository.SaveChangesAsync();
+        if (dto.Quantity > 0)
+        {
+            // Gán tồn tuyệt đối qua StockMovement (tạo dòng + ghi sổ Manual)
+            await _stockMovementService.SetQuantityAsync(
+                dto.WarehouseId,
+                dto.ProductId,
+                dto.Quantity,
+                StockTransactionType.Manual,
+                StockReferenceTypes.WarehouseStock,
+                null,
+                null,
+                reason);
+            await _warehouseStockRepository.SaveChangesAsync();
+        }
+        else
+        {
+            // Tồn 0: SetQuantityAsync bỏ qua (delta = 0) — vẫn phải tạo dòng sổ kho
+            await _warehouseStockRepository.AddAsync(new WarehouseStock
+            {
+                WarehouseId = dto.WarehouseId,
+                ProductId = dto.ProductId,
+                Quantity = 0,
+                MinQuantity = dto.MinQuantity
+            });
+            await _warehouseStockRepository.SaveChangesAsync();
+        }
 
         var stock = await _warehouseStockRepository.GetByWarehouseAndProductAsync(dto.WarehouseId, dto.ProductId)
             ?? throw new NotFoundException("Không tìm thấy tồn kho");
 
-        // MinQuantity tùy chọn gắn sau khi đã có dòng tồn
-        if (dto.MinQuantity is not null)
+        // MinQuantity tùy chọn gắn sau khi đã có dòng tồn (nhánh qty > 0)
+        if (dto.Quantity > 0 && dto.MinQuantity is not null)
         {
             stock.MinQuantity = dto.MinQuantity;
             stock.UpdatedAt = DateTime.UtcNow;

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.IdentityModel.Tokens;
@@ -18,6 +19,12 @@ builder.Services.AddControllers(options =>
         // [controller] => kebab-case: WarehouseStocks -> warehouse-stocks
         options.Conventions.Add(
             new RouteTokenTransformerConvention(new SlugifyParameterTransformer()));
+    })
+    .AddJsonOptions(options =>
+    {
+        // Cho phép enum dạng chuỗi ("Manual"/"Store") hoặc số (0/1) — tránh lỗi bind $.source
+        options.JsonSerializerOptions.Converters.Add(
+            new JsonStringEnumConverter(allowIntegerValues: true));
     })
     .ConfigureApiBehaviorOptions(options =>
     {
@@ -214,7 +221,18 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
-app.UseStaticFiles(); // /uploads/... + /swagger-ui/auto-authorize.js
+app.UseStaticFiles(new StaticFileOptions
+{
+    // Tránh browser giữ mãi ảnh seed cũ (ví dụ stock người) khi file đã đổi nội dung
+    OnPrepareResponse = ctx =>
+    {
+        if (ctx.Context.Request.Path.StartsWithSegments("/uploads"))
+        {
+            ctx.Context.Response.Headers.CacheControl = "no-cache, must-revalidate";
+            ctx.Context.Response.Headers.Pragma = "no-cache";
+        }
+    }
+});
 
 // Dev: Swagger UI — tự gắn JWT sau login (xem wwwroot/swagger-ui/auto-authorize.js)
 if (app.Environment.IsDevelopment())

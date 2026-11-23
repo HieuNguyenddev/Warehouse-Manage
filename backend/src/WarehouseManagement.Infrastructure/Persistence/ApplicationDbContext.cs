@@ -242,6 +242,13 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ReceiptDate).IsRequired(); // Ngày nhập
             e.Property(x => x.Status).IsRequired(); // Draft / Confirmed / Cancelled
             e.Property(x => x.Note).HasMaxLength(255);
+            e.Property(x => x.ShippingFee).HasColumnType("decimal(18,2)");
+            e.Property(x => x.TradeDiscount).HasColumnType("decimal(18,2)");
+            e.Property(x => x.NonRefundableTax).HasColumnType("decimal(18,2)");
+            e.Property(x => x.PurchaseInvoiceCode).HasMaxLength(30);
+            e.HasIndex(x => x.PurchaseInvoiceCode)
+                .IsUnique()
+                .HasFilter("[PurchaseInvoiceCode] IS NOT NULL");
 
             e.HasOne(x => x.Warehouse)
                 .WithMany(x => x.ImportReceipts)

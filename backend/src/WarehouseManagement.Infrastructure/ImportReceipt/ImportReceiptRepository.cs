@@ -61,6 +61,7 @@ public class ImportReceiptRepository : IImportReceiptRepository
         {
             query = query.Where(x =>
                 x.Code.Contains(search) ||
+                (x.PurchaseInvoiceCode != null && x.PurchaseInvoiceCode.Contains(search)) ||
                 (x.Note != null && x.Note.Contains(search)) ||
                 (x.Supplier != null && x.Supplier.Name.Contains(search)) ||
                 (x.Warehouse != null && (x.Warehouse.Name.Contains(search) || x.Warehouse.Code.Contains(search))));
@@ -86,6 +87,11 @@ public class ImportReceiptRepository : IImportReceiptRepository
     /// <summary>Đếm số phiếu có mã bắt đầu bằng prefix (dùng sinh mã tự động).</summary>
     public Task<int> CountByCodePrefixAsync(string prefix)
         => _dbContext.ImportReceipts.AsNoTracking().CountAsync(x => x.Code.StartsWith(prefix));
+
+    /// <summary>Đếm số hóa đơn mua hàng theo prefix HDN-…</summary>
+    public Task<int> CountByPurchaseInvoiceCodePrefixAsync(string prefix)
+        => _dbContext.ImportReceipts.AsNoTracking()
+            .CountAsync(x => x.PurchaseInvoiceCode != null && x.PurchaseInvoiceCode.StartsWith(prefix));
 
     /// <summary>Thêm phiếu nhập mới.</summary>
     public Task AddAsync(ImportReceipt receipt) => _dbContext.ImportReceipts.AddAsync(receipt).AsTask();
