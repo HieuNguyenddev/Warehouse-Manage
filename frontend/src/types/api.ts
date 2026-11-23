@@ -168,10 +168,25 @@ export interface ImportReceiptDto {
   warehouseName?: string | null
   supplierId: number
   supplierName?: string | null
+  supplierTaxCode?: string | null
+  supplierAddress?: string | null
+  supplierPhone?: string | null
+  supplierEmail?: string | null
   status: string
   note?: string | null
+  /** Tổng giá mua hàng ( SL × đơn giá) */
+  goodsAmount: number
+  /** Chi phí vận chuyển */
+  shippingFee: number
+  /** Chiết khấu thương mại */
+  tradeDiscount: number
+  /** Thuế không được hoàn lại */
+  nonRefundableTax: number
+  /** Tổng thanh toán = giá mua − CK + VC + thuế KĐHT */
   totalAmount: number
   totalQuantity: number
+  /** Mã hóa đơn mua hàng (sau xác nhận) */
+  purchaseInvoiceCode?: string | null
   confirmedAt?: string | null
   cancelledAt?: string | null
   details: ReceiptDetailLine[]

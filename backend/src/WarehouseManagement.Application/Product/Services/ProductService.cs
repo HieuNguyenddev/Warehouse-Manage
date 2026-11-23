@@ -55,6 +55,27 @@ public class ProductService : IProductService
         };
     }
 
+    public async Task<PagedResult<ProductResponseDto>> GetStoreCatalogAsync(
+        PaginationQuery query,
+        int? categoryId = null)
+    {
+        var pageSize = Math.Clamp(query.PageSize <= 0 ? 24 : query.PageSize, 1, 100);
+        var pageNumber = Math.Max(1, query.PageNumber);
+        var paged = await _repo.GetStorePagedAsync(
+            query.Search?.Trim(),
+            categoryId,
+            pageNumber,
+            pageSize);
+
+        return new PagedResult<ProductResponseDto>
+        {
+            Items = paged.Items.Select(Map).ToList(),
+            PageNumber = paged.PageNumber,
+            PageSize = paged.PageSize,
+            TotalRecords = paged.TotalRecords
+        };
+    }
+
     // Tạo sản phẩm mới từ dữ liệu client gửi lên (DTO)
     public async Task<ProductResponseDto> CreateAsync(ProductRequestDto dto)
     {

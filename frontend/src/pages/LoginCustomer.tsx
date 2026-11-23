@@ -46,10 +46,10 @@ export function LoginCustomer() {
           <Stack spacing={2} className="mb-4 items-center">
             <StorefrontIcon color="secondary" sx={{ fontSize: 40 }} />
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Customer Store
+              Nhà thuốc BV
             </Typography>
             <Typography variant="body2" color="text.secondary" align="center">
-              Đăng nhập tài khoản khách hàng
+              Đăng nhập khoa/phòng hoặc người nhận thuốc
             </Typography>
           </Stack>
           {error ? <Alert>{error}</Alert> : null}
@@ -74,9 +74,9 @@ export function LoginCustomer() {
             </Button>
           </Box>
           <Typography variant="body2" color="text.secondary" align="center" className="mt-4">
-            Nhân viên kho?{' '}
+            Nhân viên kho dược?{' '}
             <Link component={RouterLink} to="/admin/login">
-              Đăng nhập Admin
+              Đăng nhập Kho Dược
             </Link>
           </Typography>
         </CardContent>

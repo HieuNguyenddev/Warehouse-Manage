@@ -147,8 +147,14 @@ export function postForm<T>(path: string, form: FormData) {
   return apiRequest<T>(path, { method: 'POST', body: form })
 }
 
+/** Cache-bust ảnh sản phẩm seed (tránh giữ ảnh cũ không liên quan trên cùng URL). */
+const MEDIA_CACHE_BUST = 'pharma3'
+
 export function mediaUrl(path?: string | null) {
   if (!path) return ''
   if (path.startsWith('http') || path.startsWith('blob:') || path.startsWith('data:')) return path
-  return path.startsWith('/') ? path : `/${path}`
+  const normalized = path.startsWith('/') ? path : `/${path}`
+  if (!normalized.startsWith('/uploads/products/')) return normalized
+  const sep = normalized.includes('?') ? '&' : '?'
+  return `${normalized}${sep}v=${MEDIA_CACHE_BUST}`
 }

@@ -67,7 +67,7 @@ export function StoreProductDetail() {
         underline="hover"
         sx={{ color: storeColors.forest, fontWeight: 700 }}
       >
-        ← Quay lại siêu thị
+        ← Quay lại danh mục thuốc
       </Link>
 
       <Box
@@ -128,7 +128,7 @@ export function StoreProductDetail() {
             {money(product.price)}
           </Typography>
           <Typography className="mt-3" sx={{ lineHeight: 1.6, color: '#3D5A4A' }}>
-            {product.description || 'Sản phẩm chất lượng từ kho FreshMart, sẵn sàng giao nhanh.'}
+            {product.description || 'Thuốc / vật tư từ kho dược bệnh viện, sẵn sàng cấp phát.'}
           </Typography>
 
           <Stack direction="row" spacing={1.5} className="mt-6 items-center">

@@ -58,6 +58,7 @@ public class ImportReceiptService : IImportReceiptService
     {
         await EnsureHeaderRefsAsync(dto.WarehouseId, dto.SupplierId);
         var details = await BuildDetailsAsync(dto.Details);
+        EnsureCostValid(dto, details);
 
         var receipt = new ImportReceipt
         {
@@ -66,6 +67,9 @@ public class ImportReceiptService : IImportReceiptService
             WarehouseId = dto.WarehouseId,
             SupplierId = dto.SupplierId,
             Note = dto.Note?.Trim(),
+            ShippingFee = RoundMoney(dto.ShippingFee),
+            TradeDiscount = RoundMoney(dto.TradeDiscount),
+            NonRefundableTax = RoundMoney(dto.NonRefundableTax),
             Status = ImportReceiptStatus.Draft,
             Details = details
         };
@@ -83,6 +87,7 @@ public class ImportReceiptService : IImportReceiptService
 
         await EnsureHeaderRefsAsync(dto.WarehouseId, dto.SupplierId);
         var details = await BuildDetailsAsync(dto.Details);
+        EnsureCostValid(dto, details);
 
         // Thay toàn bộ chi tiết (chỉ khi còn Draft)
         if (receipt.Details.Count > 0)
@@ -92,6 +97,9 @@ public class ImportReceiptService : IImportReceiptService
         receipt.SupplierId = dto.SupplierId;
         receipt.ReceiptDate = dto.ReceiptDate?.ToUniversalTime() ?? receipt.ReceiptDate;
         receipt.Note = dto.Note?.Trim();
+        receipt.ShippingFee = RoundMoney(dto.ShippingFee);
+        receipt.TradeDiscount = RoundMoney(dto.TradeDiscount);
+        receipt.NonRefundableTax = RoundMoney(dto.NonRefundableTax);
         receipt.UpdatedAt = DateTime.UtcNow;
         receipt.Details = details;
 
@@ -101,7 +109,7 @@ public class ImportReceiptService : IImportReceiptService
         return Map(await GetReceiptAsync(receipt.Id));
     }
 
-    // Xác nhận phiếu → cộng tồn kho
+    // Xác nhận phiếu → cộng tồn kho + phát hành hóa đơn mua hàng
     public async Task<ImportReceiptResponseDto> ConfirmAsync(int id)
     {
         var receipt = await GetReceiptAsync(id);
@@ -126,6 +134,8 @@ public class ImportReceiptService : IImportReceiptService
         receipt.Status = ImportReceiptStatus.Confirmed;
         receipt.ConfirmedAt = DateTime.UtcNow;
         receipt.UpdatedAt = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(receipt.PurchaseInvoiceCode))
+            receipt.PurchaseInvoiceCode = await GeneratePurchaseInvoiceCodeAsync();
 
         _repo.Update(receipt);
         await _repo.SaveChangesAsync();
@@ -218,12 +228,30 @@ public class ImportReceiptService : IImportReceiptService
         return result;
     }
 
+    private static void EnsureCostValid(ImportReceiptRequestDto dto, List<ImportReceiptDetail> details)
+    {
+        var goods = details.Sum(x => x.LineTotal);
+        if (dto.TradeDiscount > goods)
+            throw new ValidationException("Chiết khấu thương mại không được lớn hơn tổng giá mua hàng.");
+        if (dto.ShippingFee < 0 || dto.TradeDiscount < 0 || dto.NonRefundableTax < 0)
+            throw new ValidationException("Chi phí / chiết khấu / thuế không được âm.");
+    }
+
     private async Task<string> GenerateCodeAsync()
     {
         var prefix = $"PN-{DateTime.UtcNow:yyyyMMdd}-";
         var count = await _repo.CountByCodePrefixAsync(prefix);
         return $"{prefix}{(count + 1):D4}";
     }
+
+    private async Task<string> GeneratePurchaseInvoiceCodeAsync()
+    {
+        var prefix = $"HDN-{DateTime.UtcNow:yyyyMMdd}-";
+        var count = await _repo.CountByPurchaseInvoiceCodePrefixAsync(prefix);
+        return $"{prefix}{(count + 1):D4}";
+    }
+
+    private static decimal RoundMoney(decimal v) => Math.Round(v, 2);
 
     private static void EnsureDraft(ImportReceipt receipt)
     {
@@ -261,6 +289,9 @@ public class ImportReceiptService : IImportReceiptService
             })
             .ToList();
 
+        var goods = details.Sum(x => x.LineTotal);
+        var payable = goods - r.TradeDiscount + r.ShippingFee + r.NonRefundableTax;
+
         return new ImportReceiptResponseDto
         {
             Id = r.Id,
@@ -271,10 +302,19 @@ public class ImportReceiptService : IImportReceiptService
             WarehouseName = r.Warehouse?.Name,
             SupplierId = r.SupplierId,
             SupplierName = r.Supplier?.Name,
+            SupplierTaxCode = r.Supplier?.TaxCode,
+            SupplierAddress = r.Supplier?.Address,
+            SupplierPhone = r.Supplier?.Phone,
+            SupplierEmail = r.Supplier?.Email,
             Status = r.Status.ToString(),
             Note = r.Note,
-            TotalAmount = details.Sum(x => x.LineTotal),
+            GoodsAmount = goods,
+            ShippingFee = r.ShippingFee,
+            TradeDiscount = r.TradeDiscount,
+            NonRefundableTax = r.NonRefundableTax,
+            TotalAmount = payable,
             TotalQuantity = details.Sum(x => x.Quantity),
+            PurchaseInvoiceCode = r.PurchaseInvoiceCode,
             ConfirmedAt = r.ConfirmedAt,
             CancelledAt = r.CancelledAt,
             Details = details,

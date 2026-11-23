@@ -254,18 +254,31 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("NonRefundableTax")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Note")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("PurchaseInvoiceCode")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<DateTime>("ReceiptDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ShippingFee")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
                     b.Property<int>("SupplierId")
                         .HasColumnType("int");
+
+                    b.Property<decimal>("TradeDiscount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -277,6 +290,10 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Code")
                         .IsUnique();
+
+                    b.HasIndex("PurchaseInvoiceCode")
+                        .IsUnique()
+                        .HasFilter("[PurchaseInvoiceCode] IS NOT NULL");
 
                     b.HasIndex("SupplierId");
 

@@ -22,6 +22,7 @@ import { StocksPage } from './pages/admin/StocksPage'
 import { ExportsPage, ImportsPage } from './pages/admin/ReceiptsPage'
 import { StocktakesPage } from './pages/admin/StocktakesPage'
 import { TransactionsPage } from './pages/admin/TransactionsPage'
+import { ReportsPage } from './pages/admin/ReportsPage'
 import { StoreHome } from './pages/store/StoreHome'
 import { StoreProducts } from './pages/store/StoreProducts'
 import { StoreProductDetail } from './pages/store/StoreProductDetail'
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="exports" element={<ExportsPage />} />
               <Route path="stocktakes" element={<StocktakesPage />} />
               <Route path="transactions" element={<TransactionsPage />} />
+              <Route path="reports" element={<ReportsPage />} />
             </Route>
 
             <Route path="/store" element={<CustomerLayout />}>

@@ -33,11 +33,32 @@ public class ImportReceiptResponseDto
     // Ghi chú
     public string? Note { get; set; }
 
-    // Tổng thành tiền
+    /// <summary>Tổng giá mua hàng = Σ (SL × đơn giá mua).</summary>
+    public decimal GoodsAmount { get; set; }
+
+    /// <summary>Chi phí vận chuyển.</summary>
+    public decimal ShippingFee { get; set; }
+
+    /// <summary>Chiết khấu thương mại.</summary>
+    public decimal TradeDiscount { get; set; }
+
+    /// <summary>Thuế không được hoàn lại.</summary>
+    public decimal NonRefundableTax { get; set; }
+
+    /// <summary>Tổng thanh toán = Giá mua − CK + VC + Thuế KĐHT.</summary>
     public decimal TotalAmount { get; set; }
 
     // Tổng số lượng
     public decimal TotalQuantity { get; set; }
+
+    /// <summary>Mã hóa đơn mua hàng (sau khi xác nhận).</summary>
+    public string? PurchaseInvoiceCode { get; set; }
+
+    // Snapshot NCC (in hóa đơn)
+    public string? SupplierTaxCode { get; set; }
+    public string? SupplierAddress { get; set; }
+    public string? SupplierPhone { get; set; }
+    public string? SupplierEmail { get; set; }
 
     // Thời điểm xác nhận
     public DateTime? ConfirmedAt { get; set; }

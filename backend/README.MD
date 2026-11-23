@@ -1,6 +1,8 @@
-# Warehouse Management API — Chạy & test Swagger
+# Warehouse Management API — Kho nhà thuốc bệnh viện
 
-Backend .NET (Clean Architecture) + JWT.  
+Backend .NET (Clean Architecture) + JWT cho hệ thống **quản lý kho thuốc / vật tư y tế bệnh viện**:
+danh mục thuốc, tồn kho theo kho (thường, lạnh, gây nghiện…), nhập xuất, kiểm kê, nhà cung cấp dược, khoa/phòng nhận thuốc.
+
 **Mọi API quản trị phải có JWT.** Trên Swagger: **login chưa đủ** — còn phải bấm **Authorize**.
 
 | Mục | URL / lệnh |
@@ -81,14 +83,38 @@ Khi start, `DataSeeder` tự tạo role + user mẫu.
 
 ---
 
-## 2. Tài khoản seed
+## 2. Tài khoản seed (kho nhà thuốc bệnh viện)
 
-| Username | Password | Dùng login | Gọi được API quản trị? |
-|----------|----------|------------|-------------------------|
-| `admin` | `123456` | `POST /api/v1/auth/admin/login` | Có |
-| `manager` | `123456` | admin/login | Có |
-| `staff` | `123456` | admin/login | Có |
-| `customer1` | `123456` | `POST /api/v1/auth/customer/login` | **Không** (403/401 với Products admin) |
+| Username | Password | Vai trò demo | Login |
+|----------|----------|--------------|-------|
+| `admin` | `123456` | Quản trị dược | `POST /api/v1/auth/admin/login` |
+| `manager` | `123456` | Trưởng khoa dược | admin/login |
+| `staff` | `123456` | Dược sĩ kho | admin/login |
+| `customer1` | `123456` | Khoa/phòng nhận thuốc (cổng nhà thuốc BV) | `POST /api/v1/auth/customer/login` (**không** gọi API quản trị) |
+
+Mỗi lần API khởi động, seeder **làm mới nhãn** Categories / Products / Warehouses / Suppliers / Customers sang ngữ cảnh kho dược (kể cả DB đã seed dữ liệu cũ).  
+Seeder mục tiêu **~500 bản ghi / bảng** nghiệp vụ (xem §10.7).
+
+**SQL — đối chiếu tài khoản / role seed:**
+
+```sql
+-- 4 role hệ thống
+SELECT Id, Name FROM Roles ORDER BY Id;
+
+-- User demo đăng nhập (admin / manager / staff / customer1)
+SELECT u.Id, u.Username, u.FullName, u.Email, r.Name AS RoleName, u.IsActive
+FROM Users u
+INNER JOIN Roles r ON r.Id = u.RoleId
+WHERE u.Username IN (N'admin', N'manager', N'staff', N'customer1')
+ORDER BY u.Username;
+
+-- Đếm user theo role
+SELECT r.Name AS RoleName, COUNT(*) AS SoUser
+FROM Users u
+INNER JOIN Roles r ON r.Id = u.RoleId
+GROUP BY r.Name
+ORDER BY SoUser DESC;
+```
 
 ---
 
@@ -235,6 +261,20 @@ Ghi lại `id` trả về (`categoryId`, `unitId`, `warehouseId`, `productId`, �
 | 7 | `POST /api/v1/customers/{id}/avatar` | form `file` | `/uploads/avatars/...` |
 | 8 | `POST /api/v1/warehouses` | `{"code":"WH-02","name":"Kho HCM","isActive":true}` | 201 |
 
+```sql
+-- Số liệu danh mục nền (sau seed / sau khi POST thử)
+SELECT 'Roles' AS Bang, COUNT(*) AS SoLuong FROM Roles
+UNION ALL SELECT 'Users', COUNT(*) FROM Users
+UNION ALL SELECT 'Categories', COUNT(*) FROM Categories
+UNION ALL SELECT 'Units', COUNT(*) FROM Units
+UNION ALL SELECT 'Suppliers', COUNT(*) FROM Suppliers
+UNION ALL SELECT 'Customers', COUNT(*) FROM Customers
+UNION ALL SELECT 'Warehouses', COUNT(*) FROM Warehouses;
+
+-- Kho vừa tạo (ví dụ WH-02)
+SELECT Id, Code, Name, IsActive FROM Warehouses WHERE Code = N'WH-02';
+```
+
 ### B. Sản phẩm + ảnh
 
 | # | API | Ghi chú | Kỳ vọng |
@@ -244,6 +284,20 @@ Ghi lại `id` trả về (`categoryId`, `unitId`, `warehouseId`, `productId`, �
 | 11 | `PUT .../images/{imageId}/primary` | | Đổi ảnh chính |
 | 12 | `DELETE .../images/{imageId}` | | Xóa ảnh |
 
+```sql
+-- Đếm sản phẩm / ảnh; seed chuẩn SP0001…SP0500
+SELECT COUNT(*) AS TongSanPham FROM Products;
+SELECT COUNT(*) AS TongAnh FROM ProductImages;
+SELECT COUNT(*) AS SpSeedChuan FROM Products WHERE Sku LIKE 'SP[0-9][0-9][0-9][0-9]';
+
+-- Chi tiết 1 SP + ảnh primary (đổi @Id)
+DECLARE @Id INT = 1;
+SELECT p.Id, p.Sku, p.Name, p.Price, p.MinStock, p.IsActive,
+       (SELECT COUNT(*) FROM ProductImages i WHERE i.ProductId = p.Id) AS SoAnh,
+       (SELECT TOP 1 ImageUrl FROM ProductImages i WHERE i.ProductId = p.Id AND i.IsPrimary = 1) AS AnhChinh
+FROM Products p WHERE p.Id = @Id;
+```
+
 ### C. Tồn thủ công
 
 | # | API | Kỳ vọng |
@@ -251,6 +305,26 @@ Ghi lại `id` trả về (`categoryId`, `unitId`, `warehouseId`, `productId`, �
 | 13 | `POST /api/v1/warehouse-stocks` | Manual TX |
 | 14 | `PUT /api/v1/warehouse-stocks/{id}` | Cập nhật tồn |
 | 15 | `GET /api/v1/warehouse-stocks?lowStockOnly=true` | `isLowStock` |
+
+```sql
+-- Tóm tắt tồn + tồn thấp (cùng logic API)
+SELECT COUNT(*) AS DongTon FROM WarehouseStocks;
+SELECT SUM(Quantity) AS TongSoLuong FROM WarehouseStocks;
+
+SELECT COUNT(*) AS TonThap
+FROM WarehouseStocks ws
+INNER JOIN Products p ON p.Id = ws.ProductId
+WHERE ISNULL(ws.MinQuantity, p.MinStock) > 0
+  AND ws.Quantity <= ISNULL(ws.MinQuantity, p.MinStock);
+
+SELECT COUNT(*) AS HetHang FROM WarehouseStocks WHERE Quantity <= 0;
+
+-- Giao dịch Manual gần nhất
+SELECT TOP 20 Id, WarehouseId, ProductId, QuantityChange, QuantityAfter, Note, CreatedAt
+FROM StockTransactions
+WHERE [Type] = 7  -- Manual
+ORDER BY Id DESC;
+```
 
 ### D. Nhập kho
 
@@ -264,6 +338,28 @@ Draft → Confirm (cộng tồn) → Cancel (hoàn).
 | 19 | `POST .../{id}/cancel` | Hoàn tồn |
 | 20 | `DELETE .../{id}` | Chỉ Draft → 204 |
 
+```sql
+-- Đếm phiếu nhập theo trạng thái (0 Draft, 1 Confirmed, 2 Cancelled)
+SELECT
+  CASE Status WHEN 0 THEN N'Draft' WHEN 1 THEN N'Confirmed' WHEN 2 THEN N'Cancelled' END AS TrangThai,
+  COUNT(*) AS SoPhieu
+FROM ImportReceipts
+GROUP BY Status;
+
+-- Chi tiết 1 phiếu (đổi @Code hoặc @Id)
+DECLARE @Code NVARCHAR(50) = N'PN-SEED-0001';
+SELECT r.Id, r.Code, r.Status, r.WarehouseId, r.SupplierId, r.ReceiptDate,
+       (SELECT COUNT(*) FROM ImportReceiptDetails d WHERE d.ImportReceiptId = r.Id) AS SoDong,
+       (SELECT SUM(Quantity) FROM ImportReceiptDetails d WHERE d.ImportReceiptId = r.Id) AS TongSl
+FROM ImportReceipts r WHERE r.Code = @Code;
+
+-- TX Import / ImportCancel gắn phiếu
+SELECT Id, [Type], ProductId, QuantityChange, ReferenceCode, CreatedAt
+FROM StockTransactions
+WHERE ReferenceType = N'ImportReceipt' AND ReferenceCode = @Code
+ORDER BY Id;
+```
+
 ### E. Xuất kho
 
 | # | API | Kỳ vọng |
@@ -272,6 +368,25 @@ Draft → Confirm (cộng tồn) → Cancel (hoàn).
 | 22 | `POST .../{id}/confirm` | Đủ tồn → trừ |
 | 23 | Confirm quá tồn | **409** |
 | 24 | `POST .../{id}/cancel` | Hoàn tồn |
+
+```sql
+SELECT
+  CASE Status WHEN 0 THEN N'Draft' WHEN 1 THEN N'Confirmed' WHEN 2 THEN N'Cancelled' END AS TrangThai,
+  COUNT(*) AS SoPhieu
+FROM ExportReceipts
+GROUP BY Status;
+
+SELECT
+  CASE Source WHEN 0 THEN N'Manual' WHEN 1 THEN N'Store' ELSE CONCAT(N'Other_', Source) END AS Nguon,
+  COUNT(*) AS SoPhieu
+FROM ExportReceipts
+GROUP BY Source;
+
+DECLARE @Px NVARCHAR(50) = N'PX-SEED-0001';
+SELECT r.Id, r.Code, r.Status, r.Source, r.WarehouseId, r.CustomerId,
+       (SELECT SUM(Quantity) FROM ExportReceiptDetails d WHERE d.ExportReceiptId = r.Id) AS TongSl
+FROM ExportReceipts r WHERE r.Code = @Px;
+```
 
 ### F. Kiểm kê
 
@@ -282,11 +397,44 @@ Draft → Confirm (cộng tồn) → Cancel (hoàn).
 | 29 | `POST .../{id}/confirm` | Gán tồn = counted |
 | 30 | `POST .../{id}/cancel` | Hoàn system |
 
+```sql
+SELECT
+  CASE Status WHEN 0 THEN N'Draft' WHEN 1 THEN N'Confirmed' WHEN 2 THEN N'Cancelled' END AS TrangThai,
+  COUNT(*) AS SoPhieu
+FROM Stocktakes
+GROUP BY Status;
+
+-- Dòng lệch (diff <> 0) trên phiếu gần nhất
+SELECT TOP 50 st.Code, d.ProductId, d.SystemQuantity, d.CountedQuantity,
+       (d.CountedQuantity - d.SystemQuantity) AS Diff
+FROM StocktakeDetails d
+INNER JOIN Stocktakes st ON st.Id = d.StocktakeId
+WHERE d.CountedQuantity <> d.SystemQuantity
+ORDER BY st.Id DESC, ABS(d.CountedQuantity - d.SystemQuantity) DESC;
+```
+
 ### G. Lịch sử tồn
 
 | # | API | Kỳ vọng |
 |---|-----|---------|
 | 31–34 | `GET /api/v1/stock-transactions` | Import/Export/Stocktake/Manual |
+
+```sql
+SELECT COUNT(*) AS TongGiaoDich FROM StockTransactions;
+
+SELECT
+  CASE [Type]
+    WHEN 1 THEN 'Import' WHEN 2 THEN 'ImportCancel'
+    WHEN 3 THEN 'Export' WHEN 4 THEN 'ExportCancel'
+    WHEN 5 THEN 'Stocktake' WHEN 6 THEN 'StocktakeCancel'
+    WHEN 7 THEN 'Manual' ELSE CONCAT('Other_', [Type])
+  END AS Loai,
+  COUNT(*) AS SoLuong,
+  SUM(QuantityChange) AS TongThayDoi
+FROM StockTransactions
+GROUP BY [Type]
+ORDER BY SoLuong DESC;
+```
 
 ### H. Cổng Customer (smoke)
 
@@ -295,6 +443,14 @@ Draft → Confirm (cộng tồn) → Cancel (hoàn).
 | 35 | `customer/login` với `customer1` | Token customer |
 | 36 | Token Customer → `GET /api/v1/products` | 401/403 |
 | 37 | `admin` vào `customer/login` | 401 sai cổng |
+
+```sql
+-- Xác nhận customer1 thuộc role Customer
+SELECT u.Username, r.Name AS RoleName, u.IsActive
+FROM Users u
+INNER JOIN Roles r ON r.Id = u.RoleId
+WHERE u.Username = N'customer1';
+```
 
 ---
 
@@ -349,18 +505,45 @@ Upload: Products `files` / Customer `file` → xem tại `http://localhost:5136/
 
 ## 8. Trạng thái phiếu & loại giao dịch
 
-| Status | Sửa/Xóa | Tồn |
-|--------|---------|-----|
-| `Draft` | Có | Chưa đổi |
-| `Confirmed` | Không | Đã cộng/trừ/gán |
-| `Cancelled` | Không | Đã hoàn (nếu từng Confirm) |
+| Status | Giá trị DB | Sửa/Xóa | Tồn |
+|--------|------------|---------|-----|
+| `Draft` | `0` | Có | Chưa đổi |
+| `Confirmed` | `1` | Không | Đã cộng/trừ/gán |
+| `Cancelled` | `2` | Không | Đã hoàn (nếu từng Confirm) |
 
-| StockTransactionType | Khi nào |
-|----------------------|---------|
-| `Import` / `ImportCancel` | Confirm / hủy phiếu nhập |
-| `Export` / `ExportCancel` | Confirm / hủy phiếu xuất |
-| `Stocktake` / `StocktakeCancel` | Confirm / hủy kiểm kê |
-| `Manual` | CRUD `warehouse-stocks` |
+| StockTransactionType | Giá trị DB | Khi nào |
+|----------------------|------------|---------|
+| `Import` | `1` | Confirm phiếu nhập |
+| `ImportCancel` | `2` | Hủy phiếu nhập đã Confirm |
+| `Export` | `3` | Confirm phiếu xuất |
+| `ExportCancel` | `4` | Hủy phiếu xuất đã Confirm |
+| `Stocktake` | `5` | Confirm kiểm kê |
+| `StocktakeCancel` | `6` | Hủy kiểm kê đã Confirm |
+| `Manual` | `7` | Mở sổ / điều chỉnh `warehouse-stocks` |
+
+```sql
+-- Số phiếu theo trạng thái (3 loại chứng từ)
+SELECT N'Import' AS LoaiPhieu,
+  SUM(CASE WHEN Status = 0 THEN 1 ELSE 0 END) AS Draft,
+  SUM(CASE WHEN Status = 1 THEN 1 ELSE 0 END) AS Confirmed,
+  SUM(CASE WHEN Status = 2 THEN 1 ELSE 0 END) AS Cancelled
+FROM ImportReceipts
+UNION ALL
+SELECT N'Export',
+  SUM(CASE WHEN Status = 0 THEN 1 ELSE 0 END),
+  SUM(CASE WHEN Status = 1 THEN 1 ELSE 0 END),
+  SUM(CASE WHEN Status = 2 THEN 1 ELSE 0 END)
+FROM ExportReceipts
+UNION ALL
+SELECT N'Stocktake',
+  SUM(CASE WHEN Status = 0 THEN 1 ELSE 0 END),
+  SUM(CASE WHEN Status = 1 THEN 1 ELSE 0 END),
+  SUM(CASE WHEN Status = 2 THEN 1 ELSE 0 END)
+FROM Stocktakes;
+
+-- Số giao dịch theo Type (1..7)
+SELECT [Type], COUNT(*) AS SoLuong FROM StockTransactions GROUP BY [Type] ORDER BY [Type];
+```
 
 ---
 
@@ -378,47 +561,52 @@ Upload: Products `files` / Customer `file` → xem tại `http://localhost:5136/
 
 ---
 
-## 10. SQL — đếm số lượng (Dashboard & toàn bộ bảng)
+## 10. SQL — đếm số lượng (Dashboard, seed, đối chiếu UI)
 
 > Chạy trên SQL Server (SSMS / Azure Data Studio / `sqlcmd`).  
 > Database mặc định theo `appsettings.json` (ví dụ `WareDbnew1`).  
-> Enum trạng thái phiếu: `0 = Draft`, `1 = Confirmed`, `2 = Cancelled`.
+> Enum trạng thái phiếu: `0 = Draft`, `1 = Confirmed`, `2 = Cancelled`.  
+> **Quy ước README:** chỗ nào nêu số liệu / KPI thì có SQL đối chiếu ngay bên cạnh (mục này + §2, §6, §8, §11).  
+> **File SQL đầy đủ (gom 1 chỗ):** [`scripts/WarehouseFullQueries.sql`](scripts/WarehouseFullQueries.sql) — mở file, `USE` đúng DB, chỉnh biến mục 0, chạy từng batch.
 
 ### 10.1. KPI trên Dashboard (thẻ số)
 
-```sql
--- Sản phẩm
-SELECT COUNT(*) AS SanPham FROM Products;
+> **Đầy đủ map UI ↔ SQL:** mục **§2** trong [`scripts/WarehouseFullQueries.sql`](scripts/WarehouseFullQueries.sql)  
+> (Hero, Chỉ số nhanh, Danh mục, pie/bar, tồn thấp TOP 8, 50 giao dịch gần nhất).
 
--- Kho hàng
-SELECT COUNT(*) AS KhoHang FROM Warehouses;
-
--- Tồn thấp (cùng logic API: EffectiveMin = ISNULL(MinQuantity, Product.MinStock);
--- cảnh báo khi EffectiveMin > 0 AND Quantity <= EffectiveMin)
-SELECT COUNT(*) AS TonThap
-FROM WarehouseStocks ws
-INNER JOIN Products p ON p.Id = ws.ProductId
-WHERE ISNULL(ws.MinQuantity, p.MinStock) > 0
-  AND ws.Quantity <= ISNULL(ws.MinQuantity, p.MinStock);
-
--- Nhập Draft / Xuất Draft
-SELECT COUNT(*) AS NhapDraft FROM ImportReceipts WHERE Status = 0;
-SELECT COUNT(*) AS XuatDraft FROM ExportReceipts WHERE Status = 0;
-```
-
-Một câu gom KPI:
+| Thẻ UI | SQL |
+|--------|-----|
+| Hero: Nhập đã XN | `ImportReceipts WHERE Status=1` |
+| Hero: Xuất đã XN | `ExportReceipts WHERE Status=1` |
+| Hero / KPI: Tồn thấp | `WarehouseStocks` + `EffectiveMin` |
+| Hero: KK đã XN | `Stocktakes WHERE Status=1` |
+| KPI: Thuốc / vật tư | `COUNT(*) FROM Products` |
+| KPI: Kho dược | `COUNT(*) FROM Warehouses` |
+| KPI: Phiếu nhập nháp | `ImportReceipts WHERE Status=0` |
+| KPI: Phiếu xuất nháp | `ExportReceipts WHERE Status=0` |
+| KPI: Giao dịch kho | `COUNT(*) FROM StockTransactions` |
+| Chip: Nhóm thuốc / NCC / Khoa phòng | `Categories` / `Suppliers` / `Customers` |
 
 ```sql
+-- Gom nhanh (đủ Hero + KPI chính). Chi tiết từng khối: WarehouseFullQueries.sql §2
 SELECT
-  (SELECT COUNT(*) FROM Products) AS SanPham,
-  (SELECT COUNT(*) FROM Warehouses) AS KhoHang,
+  (SELECT COUNT(*) FROM Products) AS ThuocVatTu,
+  (SELECT COUNT(*) FROM Warehouses) AS KhoDuoc,
   (SELECT COUNT(*)
    FROM WarehouseStocks ws
    INNER JOIN Products p ON p.Id = ws.ProductId
    WHERE ISNULL(ws.MinQuantity, p.MinStock) > 0
      AND ws.Quantity <= ISNULL(ws.MinQuantity, p.MinStock)) AS TonThap,
-  (SELECT COUNT(*) FROM ImportReceipts WHERE Status = 0) AS NhapDraft,
-  (SELECT COUNT(*) FROM ExportReceipts WHERE Status = 0) AS XuatDraft;
+  (SELECT COUNT(*) FROM ImportReceipts WHERE Status = 0) AS NhapNhap,
+  (SELECT COUNT(*) FROM ImportReceipts WHERE Status = 1) AS NhapDaXN,
+  (SELECT COUNT(*) FROM ExportReceipts WHERE Status = 0) AS XuatNhap,
+  (SELECT COUNT(*) FROM ExportReceipts WHERE Status = 1) AS XuatDaXN,
+  (SELECT COUNT(*) FROM Stocktakes WHERE Status = 0) AS KkNhap,
+  (SELECT COUNT(*) FROM Stocktakes WHERE Status = 1) AS KkDaXN,
+  (SELECT COUNT(*) FROM StockTransactions) AS GiaoDichKho,
+  (SELECT COUNT(*) FROM Categories) AS NhomThuoc,
+  (SELECT COUNT(*) FROM Suppliers) AS NccDuoc,
+  (SELECT COUNT(*) FROM Customers) AS KhoaPhong;
 ```
 
 ### 10.2. Biểu đồ “Cơ cấu danh mục master data”
@@ -510,9 +698,6 @@ WHERE ISNULL(ws.MinQuantity, p.MinStock) > 0
   AND ws.Quantity <= ISNULL(ws.MinQuantity, p.MinStock)
 ORDER BY ws.Quantity ASC;
 
--- Tổng giao dịch tồn
-SELECT COUNT(*) AS TongGiaoDich FROM StockTransactions;
-
 -- Phân bố loại giao dịch
 SELECT
   CASE [Type]
@@ -530,13 +715,98 @@ FROM StockTransactions
 GROUP BY [Type]
 ORDER BY SoLuong DESC;
 
--- Phiếu seed demo
+-- Phiếu / hóa đơn seed demo
 SELECT 'PN-SEED' AS Prefix, COUNT(*) AS SoLuong FROM ImportReceipts WHERE Code LIKE 'PN-SEED-%'
 UNION ALL SELECT 'PX-SEED', COUNT(*) FROM ExportReceipts WHERE Code LIKE 'PX-SEED-%'
-UNION ALL SELECT 'KK-SEED', COUNT(*) FROM Stocktakes WHERE Code LIKE 'KK-SEED-%';
+UNION ALL SELECT 'KK-SEED', COUNT(*) FROM Stocktakes WHERE Code LIKE 'KK-SEED-%'
+UNION ALL SELECT 'HDN-SEED', COUNT(*) FROM ImportReceipts WHERE PurchaseInvoiceCode LIKE 'HDN-SEED-%';
 ```
 
-### 10.6. Chạy nhanh bằng `sqlcmd` (macOS / Linux)
+### 10.6. Đối chiếu nhập / xuất / tồn (trang Stocks)
+
+```sql
+-- Theo từng SKU tại 1 kho (đổi @WarehouseId)
+DECLARE @WarehouseId INT = 1;
+
+;WITH Tx AS (
+  SELECT
+    ProductId,
+    SUM(CASE WHEN [Type] IN (1, 2) THEN QuantityChange ELSE 0 END) AS SlNhap,          -- Import / ImportCancel
+    SUM(CASE WHEN [Type] IN (3, 4) THEN -QuantityChange ELSE 0 END) AS SlXuat,         -- Export net (dương)
+    SUM(CASE WHEN [Type] IN (5, 6, 7) THEN QuantityChange ELSE 0 END) AS SlDieuChinh   -- Stocktake / Manual
+  FROM StockTransactions
+  WHERE WarehouseId = @WarehouseId
+  GROUP BY ProductId
+)
+SELECT
+  p.Sku,
+  p.Name,
+  ISNULL(t.SlNhap, 0) AS SlNhap,
+  ISNULL(t.SlXuat, 0) AS SlXuat,
+  ISNULL(t.SlDieuChinh, 0) AS SlDieuChinh,
+  ISNULL(t.SlNhap, 0) - ISNULL(t.SlXuat, 0) + ISNULL(t.SlDieuChinh, 0) AS SoTinh,
+  ISNULL(ws.Quantity, 0) AS TonKho,
+  ISNULL(ws.Quantity, 0) - (ISNULL(t.SlNhap, 0) - ISNULL(t.SlXuat, 0) + ISNULL(t.SlDieuChinh, 0)) AS ChenhLech,
+  CASE
+    WHEN ISNULL(t.SlXuat, 0) > ISNULL(t.SlNhap, 0)
+      THEN ISNULL(t.SlXuat, 0) - ISNULL(t.SlNhap, 0)
+    ELSE 0
+  END AS CanNhapThem
+FROM Products p
+LEFT JOIN WarehouseStocks ws ON ws.ProductId = p.Id AND ws.WarehouseId = @WarehouseId
+LEFT JOIN Tx t ON t.ProductId = p.Id
+WHERE ws.Id IS NOT NULL OR t.ProductId IS NOT NULL
+ORDER BY CanNhapThem DESC, ABS(ISNULL(ws.Quantity, 0) - (ISNULL(t.SlNhap, 0) - ISNULL(t.SlXuat, 0) + ISNULL(t.SlDieuChinh, 0))) DESC;
+
+-- SKU xuất > nhập (cần nhập thêm)
+SELECT ProductId,
+       SUM(CASE WHEN [Type] IN (1, 2) THEN QuantityChange ELSE 0 END) AS SlNhap,
+       SUM(CASE WHEN [Type] IN (3, 4) THEN -QuantityChange ELSE 0 END) AS SlXuat
+FROM StockTransactions
+WHERE WarehouseId = @WarehouseId
+GROUP BY ProductId
+HAVING SUM(CASE WHEN [Type] IN (3, 4) THEN -QuantityChange ELSE 0 END)
+     > SUM(CASE WHEN [Type] IN (1, 2) THEN QuantityChange ELSE 0 END);
+```
+
+### 10.7. Kiểm tra mục tiêu seed (~500 / bảng)
+
+`DataSeeder.Target = 500`. Sau khi API start lần đầu (hoặc top-up), các bảng nghiệp vụ chính nên gần ngưỡng này.
+
+```sql
+SELECT Bang, SoLuong, 500 AS MucTieu, CASE WHEN SoLuong >= 500 THEN N'OK' ELSE N'Thiếu' END AS TrangThai
+FROM (
+  SELECT 'Categories' AS Bang, COUNT(*) AS SoLuong FROM Categories
+  UNION ALL SELECT 'Units', COUNT(*) FROM Units
+  UNION ALL SELECT 'Warehouses', COUNT(*) FROM Warehouses
+  UNION ALL SELECT 'Suppliers', COUNT(*) FROM Suppliers
+  UNION ALL SELECT 'Users', COUNT(*) FROM Users
+  UNION ALL SELECT 'Customers', COUNT(*) FROM Customers
+  UNION ALL SELECT 'Products', COUNT(*) FROM Products
+  UNION ALL SELECT 'WarehouseStocks', COUNT(*) FROM WarehouseStocks
+  UNION ALL SELECT 'ImportReceipts (PN-SEED)', COUNT(*) FROM ImportReceipts WHERE Code LIKE 'PN-SEED-%'
+  UNION ALL SELECT 'ExportReceipts (PX-SEED)', COUNT(*) FROM ExportReceipts WHERE Code LIKE 'PX-SEED-%'
+  UNION ALL SELECT 'Stocktakes (KK-SEED)', COUNT(*) FROM Stocktakes WHERE Code LIKE 'KK-SEED-%'
+) x
+ORDER BY Bang;
+```
+
+### 10.8. Hóa đơn nhập (HDN)
+
+```sql
+SELECT COUNT(*) AS TongHoaDon FROM Invoices;
+SELECT COUNT(*) AS TongDongHD FROM InvoiceDetails;
+SELECT COUNT(*) AS PhieuCoMaHDN
+FROM ImportReceipts
+WHERE PurchaseInvoiceCode IS NOT NULL AND LTRIM(RTRIM(PurchaseInvoiceCode)) <> '';
+
+SELECT TOP 20 Id, Code, PurchaseInvoiceCode, Status, ShippingFee, TradeDiscount, NonRefundableTax
+FROM ImportReceipts
+WHERE PurchaseInvoiceCode LIKE 'HDN-%'
+ORDER BY Id DESC;
+```
+
+### 10.9. Chạy nhanh bằng `sqlcmd` (macOS / Linux)
 
 ```bash
 # Đổi Server / Database / Password cho khớp appsettings.json
@@ -545,195 +815,63 @@ SELECT
   (SELECT COUNT(*) FROM Products) AS SanPham,
   (SELECT COUNT(*) FROM Warehouses) AS KhoHang,
   (SELECT COUNT(*) FROM ImportReceipts WHERE Status = 0) AS NhapDraft,
-  (SELECT COUNT(*) FROM ExportReceipts WHERE Status = 0) AS XuatDraft;
+  (SELECT COUNT(*) FROM ExportReceipts WHERE Status = 0) AS XuatDraft,
+  (SELECT COUNT(*) FROM Stocktakes WHERE Status = 0) AS KkDraft,
+  (SELECT COUNT(*) FROM StockTransactions) AS GiaoDich;
 "
+
+# Chạy cả file truy vấn đầy đủ
+sqlcmd -S localhost,1434 -U sa -P '123456Aa@' -d WareDbnew1 \
+  -i scripts/WarehouseFullQueries.sql
 ```
 
 ---
 
-## 11. Test hiệu năng (API + SQL)
+## 11. Test hiệu năng
 
-> Điều kiện: API đang chạy (`dotnet run --launch-profile http`), DB đã seed ~500 bản ghi/bảng.  
-> Script: `backend/scripts/perf-test.sh` (curl + Python, không cần cài thêm tool).
+Thay cho script bash/k6: dùng **xUnit performance tests** trong  
+`backend/tests/WarehouseManagement.PerformanceTests`  
+(chi tiết: `backend/tests/README.md`).
 
-### 11.1. Chạy nhanh
-
-```bash
-chmod +x backend/scripts/perf-test.sh
-./backend/scripts/perf-test.sh
-```
-
-Tuỳ chọn:
+### 11.1. Chạy
 
 ```bash
-BASE_URL=http://localhost:5136 \
-ROUNDS=20 \
-CONCURRENCY=10 \
-CONCURRENT_TOTAL=50 \
-AVG_WARN_MS=400 \
-P95_WARN_MS=800 \
-FAIL_ON_THRESHOLD=0 \
-./backend/scripts/perf-test.sh
+# Bắt buộc: đứng ở thư mục backend/ (không phải WebAPI)
+cd backend
+dotnet test tests/WarehouseManagement.PerformanceTests
 ```
 
-| Biến | Mặc định | Ý nghĩa |
-|------|----------|---------|
-| `ROUNDS` | 15 | Số lần đo tuần tự mỗi endpoint |
-| `CONCURRENCY` | 8 | Số request song song |
-| `CONCURRENT_TOTAL` | 40 | Tổng request trong burst |
-| `AVG_WARN_MS` / `P95_WARN_MS` | 400 / 800 | Ngưỡng cảnh báo (ms) |
-| `FAIL_ON_THRESHOLD` | 0 | `1` = exit 1 nếu có endpoint SLOW |
-
-Script đo 3 nhóm:
-1. **Latency tuần tự** — login, products (trang 1/50, search, pageSize=100), categories/units/warehouses/suppliers/customers/users, stocks (+ lowStock), phiếu Draft, transactions, health → in `min / p50 / avg / p95 / max`
-2. **Concurrent burst** — 40× GET products song song
-3. **Dashboard parallel** — ~9 API như UI `Promise.all`, đo wall-time
-
-### 11.2. Test độ chịu tải (load / stress / spike / soak)
-
-Script: `backend/scripts/perf-load.sh` — nhiều kịch bản đo khả năng chịu tải với ~500 bản ghi/bảng.
+Nếu đang ở `src/WarehouseManagement.WebAPI`:
 
 ```bash
-chmod +x backend/scripts/perf-load.sh
-
-# Chạy TẤT CẢ scenario
-./backend/scripts/perf-load.sh
-
-# Chỉ một hoặc vài scenario
-./backend/scripts/perf-load.sh ramp
-./backend/scripts/perf-load.sh spike soak
-./backend/scripts/perf-load.sh mixed authstorm write deep
+dotnet test ../../tests/WarehouseManagement.PerformanceTests/WarehouseManagement.PerformanceTests.csproj
 ```
 
-| Scenario | Mục đích | Mặc định |
-|----------|----------|----------|
-| **ramp** | Tăng dần concurrency `2→5→10→20→40` | 40 req/bậc |
-| **spike** | Đột ngột ~50 VU | 100 req |
-| **soak** | Giữ tải ổn định lâu | 10 VU × 30s (mixed GET) |
-| **mixed** | Xen kẽ nhiều endpoint (giống user thật) | 12 VU × 60 req |
-| **authstorm** | Nhiều `POST login` song song | 15 × 45 |
-| **write** | POST category + DELETE (ghi DB) | 5 × 20 |
-| **deep** | Phân trang sâu page 1..50 dưới tải | 10 × 40 |
+### 11.2. Nội dung đo
 
-Mỗi scenario in: `ok/err/%`, `p50/avg/p95/p99/max`.  
-**FAIL** nếu `error > MAX_ERROR_PCT` (mặc định 5%) hoặc `p95 > P95_WARN_MS` (mặc định 1500ms).
-
-Tuỳ chỉnh tải nặng hơn:
+`LoginPerformanceTests` — đăng nhập theo nấc **50 → 100 → 250 → 500 → 750 → 1000**.
 
 ```bash
-# Ramp cao hơn
-RAMP_LEVELS=10,20,40,60,80 RAMP_REQUESTS=60 ./backend/scripts/perf-load.sh ramp
-
-# Spike mạnh
-SPIKE_CONCURRENCY=100 SPIKE_REQUESTS=200 ./backend/scripts/perf-load.sh spike
-
-# Soak 2 phút
-SOAK_CONCURRENCY=20 SOAK_SECONDS=120 ./backend/scripts/perf-load.sh soak
-
-# Mixed + write
-MIXED_CONCURRENCY=20 WRITE_CONCURRENCY=8 ./backend/scripts/perf-load.sh mixed write
-
-# Siết ngưỡng
-MAX_ERROR_PCT=1 P95_WARN_MS=800 ./backend/scripts/perf-load.sh
+# API đang chạy cổng 5136
+cd backend
+dotnet test tests/WarehouseManagement.PerformanceTests
 ```
 
-### 11.3. Checklist endpoint nên đo (thủ công / Swagger)
+Sau khi chạy xong, tự xuất Excel:
 
-| # | API | Mục đích |
-|---|-----|----------|
-| 1 | `POST /api/v1/auth/admin/login` | Auth + hash password |
-| 2 | `GET /api/v1/products?pageNumber=1&pageSize=10` | List + ảnh |
-| 3 | `GET /api/v1/products?pageNumber=50&pageSize=10` | Trang sâu (~500 SP) |
-| 4 | `GET /api/v1/products?search=Gao&pageSize=20` | Search Name/SKU |
-| 5 | `GET /api/v1/products?pageSize=100` | Payload lớn |
-| 6 | `GET /api/v1/warehouse-stocks?lowStockOnly=true` | Filter join Product |
-| 7 | `GET /api/v1/import-receipts?status=Draft` | Filter enum |
-| 8 | `GET /api/v1/stock-transactions?pageSize=50` | Bảng giao dịch lớn |
-| 9 | Dashboard: gọi song song các API §10 KPI | Wall-time UI |
+`tests/WarehouseManagement.PerformanceTests/TestResults/PerformanceTests_Latest.xlsx`
 
-### 11.4. Đo một endpoint bằng `curl`
+Chi tiết: `backend/tests/README.md`.
 
-```bash
-TOKEN=$(curl -s -X POST http://localhost:5136/api/v1/auth/admin/login \
-  -H 'Content-Type: application/json' \
-  -d '{"username":"admin","password":"123456"}' \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['data']['token'])")
-
-# time_total (giây) — lặp 10 lần
-for i in $(seq 1 10); do
-  curl -sf -o /dev/null -w "products_p1 %{time_total}s\n" \
-    -H "Authorization: Bearer $TOKEN" \
-    'http://localhost:5136/api/v1/products?pageNumber=1&pageSize=20'
-done
-```
-
-### 11.5. SQL — đo thời gian truy vấn (SSMS / sqlcmd)
+### 11.3. SQL — đo thời gian truy vấn (tuỳ chọn, SSMS)
 
 ```sql
 SET STATISTICS TIME ON;
-SET STATISTICS IO ON;
-
--- List products trang 1 (giống API phân trang)
-SELECT TOP (20) Id, Sku, Name, Price, CategoryId, UnitId
-FROM Products
-ORDER BY Id;
-
--- Search
-SELECT TOP (20) Id, Sku, Name
-FROM Products
-WHERE Name LIKE N'%Gao%' OR Sku LIKE N'%Gao%'
-ORDER BY Id;
-
--- Tồn thấp (cùng logic Dashboard)
-SELECT COUNT(*) AS TonThap
-FROM WarehouseStocks ws
-INNER JOIN Products p ON p.Id = ws.ProductId
-WHERE ISNULL(ws.MinQuantity, p.MinStock) > 0
-  AND ws.Quantity <= ISNULL(ws.MinQuantity, p.MinStock);
-
--- Phiếu nhập Draft
-SELECT COUNT(*) FROM ImportReceipts WHERE Status = 0;
-
--- Stock transactions gần đây
-SELECT TOP (50) *
-FROM StockTransactions
-ORDER BY CreatedAt DESC;
-
+SELECT TOP (20) Id, Sku, Name FROM Products ORDER BY Id;
+SELECT TOP (20) Id, Sku, Name FROM Products
+WHERE Name LIKE N'%Paracetamol%' OR Sku LIKE N'%Paracetamol%';
 SET STATISTICS TIME OFF;
-SET STATISTICS IO OFF;
 ```
-
-Xem trong Messages: **CPU time / elapsed time**.  
-Nếu `logical reads` cao bất thường → kiểm tra index (Sku, Code, Status, WarehouseId+ProductId…).
-
-### 11.6. Gợi ý đọc kết quả chịu tải
-
-| Hiện tượng | Ý nghĩa / hướng xử lý |
-|------------|------------------------|
-| `ramp` FAIL ở bậc cao (40+) | Sát giới hạn: pool SQL / thread Kestrel |
-| `spike` err% cao, p95 tăng vọt | Chưa sẵn sàng đột biến — cần queue / rate limit / cache |
-| `soak` ổn đầu rồi FAIL dần | Memory leak / connection leak / tempdb |
-| `authstorm` chậm | Hash password tốn CPU — bình thường; đừng spam login UI |
-| `write` FAIL | Lock DB / unique constraint / validation |
-| `deep` chậm hơn `get` trang 1 | OFFSET lớn — cân nhắc keyset pagination |
-| `GET products pageSize=100` chậm | Giảm pageSize; tránh Include ảnh thừa |
-| Concurrent nhiều 5xx / timeout | Connection string `Max Pool Size`; tài nguyên máy |
-
-### 11.7. (Tuỳ chọn) k6 — nhiều scenario
-
-Cài [k6](https://k6.io) rồi:
-
-```bash
-# Smoke / Load / Stress / Spike / Soak / Mixed
-k6 run -e SCENARIO=smoke  -e BASE_URL=http://localhost:5136 backend/scripts/perf-k6.js
-k6 run -e SCENARIO=load   -e BASE_URL=http://localhost:5136 backend/scripts/perf-k6.js
-k6 run -e SCENARIO=stress -e BASE_URL=http://localhost:5136 backend/scripts/perf-k6.js
-k6 run -e SCENARIO=spike  -e BASE_URL=http://localhost:5136 backend/scripts/perf-k6.js
-k6 run -e SCENARIO=soak   -e BASE_URL=http://localhost:5136 -e SOAK_DURATION=3m backend/scripts/perf-k6.js
-k6 run -e SCENARIO=mixed  -e BASE_URL=http://localhost:5136 backend/scripts/perf-k6.js
-```
-
-Thresholds mặc định: `http_req_failed < 5%`, `p95 < 1.5s`, `p99 < 3s`.
 
 ---
 
@@ -745,6 +883,7 @@ WarehouseManagement.Application     DTO, Interface, Service
 WarehouseManagement.Infrastructure  EF, Repository, JWT, File, Seeder
 WarehouseManagement.WebAPI          Controllers, Swagger, Program.cs
 WarehouseManagement.Shared          ApiResponse, Exception, AppRoles, Pagination
+tests/WarehouseManagement.PerformanceTests   đo hiệu năng (catalog / paging / phiếu)
 ```
 
 - Admin API: `AdminApiController` → `[Authorize(Roles = Admin,Manager,Staff)]`.
@@ -767,4 +906,5 @@ dotnet run --launch-profile http
 
 **Tóm tắt:**  
 `dotnet run --launch-profile http` → mở `/swagger` → **admin/login** → **Authorize (dán token)** → xem Curl có `Authorization` → mới GET/POST/PUT/DELETE.  
-Đối chiếu số Dashboard: **§10 SQL**. Test hiệu năng: **§11** / `./backend/scripts/perf-test.sh`.
+**Số liệu ↔ SQL:** tài khoản §2, checklist §6, enum §8, Dashboard/seed/đối chiếu §10, perf 500 SP §11.  
+Test hiệu năng: từ `backend/`: `dotnet test tests/WarehouseManagement.PerformanceTests`.

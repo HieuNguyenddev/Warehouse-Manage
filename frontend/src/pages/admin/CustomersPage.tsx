@@ -37,8 +37,8 @@ export function CustomersPage() {
         }}
       />
       <ResourcePage<CustomerDto>
-        title="Customers"
-        subtitle="Khách hàng + tài khoản Customer (tuỳ chọn)"
+        title="Khoa / phòng"
+        subtitle="Đơn vị nhận thuốc trong bệnh viện (+ tài khoản cổng nhà thuốc BV tuỳ chọn)"
         icon={<GroupsIcon color="primary" />}
         list={customersApi.list}
         create={customersApi.create}

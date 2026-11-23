@@ -28,10 +28,23 @@ export function StoreHome() {
       try {
         const [c, p] = await Promise.all([
           storeApi.categories({ pageNumber: 1, pageSize: 12 }),
-          storeApi.products({ pageNumber: 1, pageSize: 8 }),
+          storeApi.products({ pageNumber: 1, pageSize: 48 }),
         ])
         setCats(c.items.filter((x) => x.isActive).slice(0, 8))
-        setFeatured(p.items)
+        // Featured: mỗi danh mục tối đa 1 SP → đa dạng, không trùng tên
+        const seenName = new Set<string>()
+        const seenCat = new Set<number>()
+        const picked: ProductDto[] = []
+        for (const item of p.items) {
+          const nameKey = (item.name || '').trim().toLowerCase()
+          if (!nameKey || seenName.has(nameKey)) continue
+          if (item.categoryId && seenCat.has(item.categoryId) && picked.length >= 4) continue
+          seenName.add(nameKey)
+          if (item.categoryId) seenCat.add(item.categoryId)
+          picked.push(item)
+          if (picked.length >= 12) break
+        }
+        setFeatured(picked)
       } catch {
         setCats([])
         setFeatured([])
@@ -70,11 +83,11 @@ export function StoreHome() {
                 letterSpacing: '-0.03em',
               }}
             >
-              FreshMart
+              Nhà thuốc BV
             </Typography>
             <Typography className="mt-3 max-w-md" sx={{ opacity: 0.92, fontSize: 17, lineHeight: 1.5 }}>
-              Xin chào {user?.fullName?.split(' ').slice(-1)[0] || 'bạn'} — chọn hàng tươi, giá siêu thị,
-              giao nhanh trong ngày.
+              Xin chào {user?.fullName?.split(' ').slice(-1)[0] || 'bạn'} — tra cứu thuốc và vật tư
+              từ kho dược bệnh viện, đặt nhận nhanh trong ngày.
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} className="mt-6">
               <Button

@@ -46,10 +46,10 @@ export function LoginAdmin() {
           <Stack spacing={2} className="mb-4 items-center">
             <WarehouseIcon color="primary" sx={{ fontSize: 40 }} />
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Admin Portal
+              Kho Dược BV
             </Typography>
             <Typography variant="body2" color="text.secondary" align="center">
-              Đăng nhập quản trị / quản lý / nhân viên kho
+              Đăng nhập quản trị / trưởng khoa / dược sĩ kho thuốc
             </Typography>
           </Stack>
           {error ? <Alert>{error}</Alert> : null}
