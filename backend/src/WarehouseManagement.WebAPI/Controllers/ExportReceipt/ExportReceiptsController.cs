@@ -64,6 +64,8 @@ public class ExportReceiptsController : AdminApiController
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] ExportReceiptRequestDto dto)
     {
+        // Admin portal chỉ sửa phiếu Manual (Store đến từ checkout)
+        dto.Source = ExportReceiptSource.Manual;
         var result = await _exportReceiptService.UpdateAsync(id, dto);
         return Ok(ApiResponse<ExportReceiptResponseDto>.Ok(result, "Cập nhật phiếu xuất thành công"));
     }

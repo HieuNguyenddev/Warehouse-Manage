@@ -15,7 +15,7 @@ public class ExportReceipt : BaseEntity
 
     public ExportReceiptStatus Status { get; set; } = ExportReceiptStatus.Draft; // Trạng thái nghiệp vụ phiếu
 
-    // Manual = tạo tay admin; Store = khách mua online (FreshMart)
+    // Manual = tạo tay admin; Store = đơn từ cổng nhà thuốc BV
     public ExportReceiptSource Source { get; set; } = ExportReceiptSource.Manual; // Nguồn tạo phiếu xuất
 
     public string? Note { get; set; } // Ghi chú phiếu xuất

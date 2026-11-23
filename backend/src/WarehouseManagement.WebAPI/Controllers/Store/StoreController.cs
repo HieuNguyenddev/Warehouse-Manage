@@ -41,8 +41,10 @@ public class StoreController : ControllerBase
         [FromQuery] PaginationQuery query,
         [FromQuery] int? categoryId = null)
     {
-        var result = await _productService.GetAllAsync(query, categoryId);
-        result.Items = result.Items.Where(x => x.IsActive).ToList();
+        // Catalog nhà thuốc: SKU chuẩn, không trùng tên, xen nhóm thuốc
+        if (query.PageSize <= 0 || query.PageSize < 24)
+            query.PageSize = 24;
+        var result = await _productService.GetStoreCatalogAsync(query, categoryId);
         return Ok(ApiResponse<PagedResult<ProductResponseDto>>.Ok(result));
     }
 

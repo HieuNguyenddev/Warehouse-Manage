@@ -150,7 +150,7 @@ public class StoreCheckoutService : IStoreCheckoutService
     // Ghép ghi chú phiếu xuất: mã HĐ + ghi chú khách (cắt 255).
     private static string BuildStoreExportNote(string invoiceCode, string? customerNote)
     {
-        var parts = new List<string> { $"FreshMart online · {invoiceCode}" };
+        var parts = new List<string> { $"Nhà thuốc BV online · {invoiceCode}" };
         if (!string.IsNullOrWhiteSpace(customerNote))
             parts.Add(customerNote.Trim());
 

@@ -12,6 +12,9 @@ public interface IProductService
     // Lấy danh sách sản phẩm phân trang; có thể lọc theo categoryId.
     Task<PagedResult<ProductResponseDto>> GetAllAsync(PaginationQuery query, int? categoryId = null);
 
+    /// <summary>Catalog cổng nhà thuốc (không trùng tên, SKU chuẩn).</summary>
+    Task<PagedResult<ProductResponseDto>> GetStoreCatalogAsync(PaginationQuery query, int? categoryId = null);
+
     // Tạo sản phẩm mới.
     Task<ProductResponseDto> CreateAsync(ProductRequestDto dto);
 

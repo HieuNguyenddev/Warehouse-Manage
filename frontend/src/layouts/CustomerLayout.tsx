@@ -19,7 +19,7 @@ import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import PersonIcon from '@mui/icons-material/Person'
 import LogoutIcon from '@mui/icons-material/Logout'
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlineOutlined'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import RemoveIcon from '@mui/icons-material/Remove'
 import CloseIcon from '@mui/icons-material/Close'
@@ -30,7 +30,7 @@ import { money } from '../components/ui'
 
 const links = [
   { to: '/store', label: 'Trang chủ', end: true, icon: <HomeIcon fontSize="small" /> },
-  { to: '/store/products', label: 'Siêu thị', icon: <Inventory2Icon fontSize="small" /> },
+  { to: '/store/products', label: 'Danh mục thuốc', icon: <Inventory2Icon fontSize="small" /> },
   { to: '/store/orders', label: 'Đơn hàng', icon: <ReceiptLongIcon fontSize="small" /> },
   { to: '/store/profile', label: 'Tài khoản', icon: <PersonIcon fontSize="small" /> },
 ]
@@ -83,10 +83,10 @@ export function CustomerLayout() {
             </Box>
             <Box className="hidden sm:block">
               <Typography sx={{ fontWeight: 800, lineHeight: 1.1 }}>
-                FreshMart
+                Nhà thuốc BV
               </Typography>
               <Typography variant="caption" sx={{ color: '#5C7A68' }}>
-                Siêu thị trực tuyến
+                Kho dược bệnh viện
               </Typography>
             </Box>
           </Stack>
@@ -178,9 +178,9 @@ export function CustomerLayout() {
         }}
       >
         <Box className="mx-auto flex max-w-6xl flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between">
-          <Typography sx={{ fontWeight: 700 }}>FreshMart</Typography>
+          <Typography sx={{ fontWeight: 700 }}>Nhà thuốc BV</Typography>
           <Typography variant="body2" sx={{ opacity: 0.85 }}>
-            Giao hàng nhanh · Giá siêu thị · Tươi mỗi ngày
+            Cấp phát thuốc · Vật tư y tế · Kho dược bệnh viện
           </Typography>
         </Box>
       </Box>
@@ -210,7 +210,7 @@ export function CustomerLayout() {
               <Box className="py-16 text-center">
                 <ShoppingCartOutlinedIcon sx={{ fontSize: 48, color: '#9BB5A6' }} />
                 <Typography className="mt-2" color="text.secondary">
-                  Giỏ còn trống — vào siêu thị chọn món nhé
+                  Giỏ còn trống — vào danh mục thuốc để chọn sản phẩm
                 </Typography>
                 <Button
                   className="mt-4"

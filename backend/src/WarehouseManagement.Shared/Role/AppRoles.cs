@@ -6,7 +6,7 @@ public static class AppRoles
     public const string Admin = "Admin"; // quản trị hệ thống
     public const string Manager = "Manager"; // quản lý kho
     public const string Staff = "Staff"; // nhân viên kho
-    public const string Customer = "Customer"; // khách hàng (cổng FreshMart)
+    public const string Customer = "Customer"; // khoa/phòng hoặc bệnh nhân (cổng nhà thuốc BV)
 
     // Chuỗi Roles cho [Authorize(Roles = ...)] cổng admin
     public const string AdminPortal = Admin + "," + Manager + "," + Staff;

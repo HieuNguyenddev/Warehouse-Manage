@@ -21,6 +21,9 @@ public interface IImportReceiptRepository
     // Đếm số phiếu có mã bắt đầu bằng prefix (dùng sinh mã tự động).
     Task<int> CountByCodePrefixAsync(string prefix);
 
+    // Đếm số hóa đơn mua hàng theo prefix HDN-…
+    Task<int> CountByPurchaseInvoiceCodePrefixAsync(string prefix);
+
     // Thêm phiếu nhập mới.
     Task AddAsync(ImportReceipt receipt);
 

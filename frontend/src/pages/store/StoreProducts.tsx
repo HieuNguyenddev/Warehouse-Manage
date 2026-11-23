@@ -53,11 +53,19 @@ export function StoreProducts() {
       try {
         const data = await storeApi.products({
           pageNumber: page,
-          pageSize: 12,
+          pageSize: 24,
           search,
           categoryId: categoryId === '' ? undefined : categoryId,
         })
-        setRows(data.items)
+        // Chống trùng tên phía client (phòng dữ liệu cũ)
+        const seen = new Set<string>()
+        const unique = data.items.filter((p) => {
+          const key = (p.name || '').trim().toLowerCase()
+          if (!key || seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        setRows(unique)
         setTotalPages(data.totalPages || 1)
         setError('')
       } catch (e) {
@@ -76,14 +84,14 @@ export function StoreProducts() {
       <Stack direction={{ xs: 'column', md: 'row' }} className="mb-6 items-start justify-between gap-4">
         <Box>
           <Typography sx={{ fontWeight: 800, fontSize: 28 }}>
-            Siêu thị
+            Danh mục thuốc
           </Typography>
-          <Typography sx={{ color: '#5C7A68' }}>Chọn hàng · thêm giỏ · thanh toán nhanh</Typography>
+          <Typography sx={{ color: '#5C7A68' }}>Chọn thuốc / vật tư · thêm giỏ · đặt nhận nhanh</Typography>
         </Box>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} className="w-full md:w-auto md:min-w-[420px]">
           <TextField
             size="small"
-            placeholder="Tìm rau củ, sữa, đồ khô..."
+            placeholder="Tìm thuốc / vật tư / SKU..."
             value={search}
             onChange={(e) => {
               setPage(1)

@@ -32,6 +32,7 @@ import FactCheckIcon from '@mui/icons-material/FactCheck'
 import HistoryIcon from '@mui/icons-material/History'
 import LayersIcon from '@mui/icons-material/Layers'
 import LogoutIcon from '@mui/icons-material/Logout'
+import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined'
 import { useAuth } from '../auth/AuthContext'
 
 const drawerWidth = 260
@@ -42,19 +43,22 @@ const groups: {
 }[] = [
   {
     title: 'Tổng quan',
-    items: [{ to: '/admin', label: 'Bảng điều khiển', end: true, icon: <DashboardIcon fontSize="small" /> }],
+    items: [
+      { to: '/admin', label: 'Bảng điều khiển', end: true, icon: <DashboardIcon fontSize="small" /> },
+      { to: '/admin/reports', label: 'Báo cáo kho', icon: <AssessmentOutlinedIcon fontSize="small" /> },
+    ],
   },
   {
     title: 'Danh mục',
     items: [
       { to: '/admin/roles', label: 'Vai trò', icon: <AdminPanelSettingsIcon fontSize="small" /> },
       { to: '/admin/users', label: 'Người dùng', icon: <ManageAccountsIcon fontSize="small" /> },
-      { to: '/admin/categories', label: 'Danh mục SP', icon: <CategoryIcon fontSize="small" /> },
+      { to: '/admin/categories', label: 'Nhóm thuốc', icon: <CategoryIcon fontSize="small" /> },
       { to: '/admin/units', label: 'Đơn vị tính', icon: <StraightenIcon fontSize="small" /> },
-      { to: '/admin/suppliers', label: 'Nhà cung cấp', icon: <LocalShippingIcon fontSize="small" /> },
-      { to: '/admin/customers', label: 'Khách hàng', icon: <GroupsIcon fontSize="small" /> },
-      { to: '/admin/warehouses', label: 'Kho hàng', icon: <WarehouseIcon fontSize="small" /> },
-      { to: '/admin/products', label: 'Sản phẩm', icon: <InventoryIcon fontSize="small" /> },
+      { to: '/admin/suppliers', label: 'NCC dược', icon: <LocalShippingIcon fontSize="small" /> },
+      { to: '/admin/customers', label: 'Khoa / phòng', icon: <GroupsIcon fontSize="small" /> },
+      { to: '/admin/warehouses', label: 'Kho dược', icon: <WarehouseIcon fontSize="small" /> },
+      { to: '/admin/products', label: 'Thuốc / VT', icon: <InventoryIcon fontSize="small" /> },
     ],
   },
   {
@@ -81,9 +85,9 @@ export function AdminLayout() {
       <Toolbar className="gap-2">
         <WarehouseIcon color="primary" />
         <Box>
-          <Typography sx={{ fontWeight: 700 }}>Warehouse Admin</Typography>
+          <Typography sx={{ fontWeight: 700 }}>Kho Dược BV</Typography>
           <Typography variant="caption" color="text.secondary">
-            Quản lý kho hàng
+            Quản lý kho nhà thuốc bệnh viện
           </Typography>
         </Box>
       </Toolbar>
@@ -163,7 +167,7 @@ export function AdminLayout() {
             </IconButton>
           ) : null}
           <Typography variant="h6" className="flex-1" sx={{ fontWeight: 600 }}>
-            Hệ thống quản lý kho
+            Hệ thống quản lý kho nhà thuốc bệnh viện
           </Typography>
         </Toolbar>
       </AppBar>

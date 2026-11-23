@@ -4,5 +4,5 @@ namespace WarehouseManagement.Domain;
 public enum ExportReceiptSource
 {
     Manual = 0, // Tạo thủ công bởi admin/nhân viên kho
-    Store = 1   // Phát sinh từ đơn mua online (FreshMart)
+    Store = 1   // Phát sinh từ đơn mua online (cổng nhà thuốc BV)
 }

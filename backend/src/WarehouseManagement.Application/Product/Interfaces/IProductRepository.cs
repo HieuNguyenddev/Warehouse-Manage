@@ -12,6 +12,9 @@ public interface IProductRepository
     // Lấy danh sách Product phân trang; lọc theo search và categoryId.
     Task<PagedResult<Product>> GetPagedAsync(string? search, int? categoryId, int pageNumber, int pageSize);
 
+    /// <summary>Catalog cửa hàng: chỉ SP active, SKU chuẩn SP####, tên không trùng, sắp xếp đa dạng.</summary>
+    Task<PagedResult<Product>> GetStorePagedAsync(string? search, int? categoryId, int pageNumber, int pageSize);
+
     // Kiểm tra SKU đã tồn tại (có thể loại trừ Id khi cập nhật).
     Task<bool> ExistsBySkuAsync(string sku, int? excludeId = null);
 

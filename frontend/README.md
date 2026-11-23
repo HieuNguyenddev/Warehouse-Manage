@@ -1,11 +1,11 @@
-# Warehouse Frontend (React + TypeScript)
+# Warehouse Frontend — Kho nhà thuốc bệnh viện (React + TypeScript)
 
 UI: **Material UI** + **Tailwind CSS** (layout/spacing).
 
 Hai cổng:
 
-- **Admin** `/admin/login` — quản trị kho (CRUD + nhập/xuất/kiểm kê), dashboard bám API
-- **Customer** `/store/login` — xem sản phẩm + hồ sơ
+- **Admin** `/admin/login` — quản trị kho dược (CRUD thuốc/vật tư, nhập/xuất/kiểm kê), dashboard
+- **Customer** `/store/login` — cổng nhà thuốc BV (tra cứu thuốc, đặt nhận)
 
 ## Chạy
 
