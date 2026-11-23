@@ -29,7 +29,7 @@ export function StoreOrders() {
 
   return (
     <Box className="mx-auto max-w-4xl px-4 py-8">
-      <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 28 }}>
+      <Typography sx={{ fontWeight: 800, fontSize: 28 }}>
         Đơn hàng của tôi
       </Typography>
       <Typography sx={{ color: '#5C7A68', mb: 3 }}>Hóa đơn và phiếu xuất kho đã phát hành</Typography>

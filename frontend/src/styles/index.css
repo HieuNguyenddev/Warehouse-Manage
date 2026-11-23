@@ -9,6 +9,7 @@
 
   body {
     margin: 0;
+    font-family: 'Be Vietnam Pro', sans-serif;
     @apply bg-slate-50 text-slate-900 antialiased;
   }
 }
