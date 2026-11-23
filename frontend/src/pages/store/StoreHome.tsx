@@ -64,7 +64,6 @@ export function StoreHome() {
           <Box className="max-w-xl flex-1">
             <Typography
               sx={{
-                fontFamily: '"Sora", sans-serif',
                 fontWeight: 800,
                 fontSize: { xs: '2.4rem', md: '3.4rem' },
                 lineHeight: 1.05,
@@ -134,7 +133,7 @@ export function StoreHome() {
       <Box className="mx-auto max-w-6xl px-4 py-10">
         <Stack direction="row" className="mb-4 items-end justify-between">
           <Box>
-            <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 24 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 24 }}>
               Danh mục nổi bật
             </Typography>
             <Typography variant="body2" sx={{ color: '#5C7A68' }}>
@@ -183,7 +182,7 @@ export function StoreHome() {
       <Box className="mx-auto max-w-6xl px-4 pb-14">
         <Stack direction="row" className="mb-4 items-end justify-between">
           <Box>
-            <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 24 }}>
+            <Typography sx={{ fontWeight: 800, fontSize: 24 }}>
               Gợi ý hôm nay
             </Typography>
             <Typography variant="body2" sx={{ color: '#5C7A68' }}>

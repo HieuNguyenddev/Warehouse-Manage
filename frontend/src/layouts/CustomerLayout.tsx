@@ -47,7 +47,6 @@ export function CustomerLayout() {
       sx={{
         bgcolor: storeColors.cream,
         color: storeColors.ink,
-        fontFamily: '"Manrope", "Sora", system-ui, sans-serif',
       }}
     >
       <AppBar
@@ -83,7 +82,7 @@ export function CustomerLayout() {
               <StorefrontIcon fontSize="small" />
             </Box>
             <Box className="hidden sm:block">
-              <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, lineHeight: 1.1 }}>
+              <Typography sx={{ fontWeight: 800, lineHeight: 1.1 }}>
                 FreshMart
               </Typography>
               <Typography variant="caption" sx={{ color: '#5C7A68' }}>
@@ -179,7 +178,7 @@ export function CustomerLayout() {
         }}
       >
         <Box className="mx-auto flex max-w-6xl flex-col gap-2 px-4 sm:flex-row sm:items-center sm:justify-between">
-          <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 700 }}>FreshMart</Typography>
+          <Typography sx={{ fontWeight: 700 }}>FreshMart</Typography>
           <Typography variant="body2" sx={{ opacity: 0.85 }}>
             Giao hàng nhanh · Giá siêu thị · Tươi mỗi ngày
           </Typography>
@@ -198,7 +197,7 @@ export function CustomerLayout() {
       >
         <Box className="flex h-full flex-col">
           <Stack direction="row" className="items-center justify-between p-4">
-            <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800 }}>
+            <Typography sx={{ fontWeight: 800 }}>
               Giỏ hàng ({cart.totalQty})
             </Typography>
             <IconButton onClick={() => setCartOpen(false)}>

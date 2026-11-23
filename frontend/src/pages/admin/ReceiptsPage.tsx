@@ -287,7 +287,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                         {store ? <Chip size="small" color="success" label="Online" sx={{ height: 20, fontSize: 10 }} /> : null}
                       </Stack>
                       {ex.invoiceCode ? (
-                        <Typography variant="caption" color="text.secondary" display="block">
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                           {ex.invoiceCode}
                         </Typography>
                       ) : null}
@@ -297,7 +297,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                         {formatDateTime(r.receiptDate)}
                       </Typography>
                       {r.confirmedAt ? (
-                        <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 10 }}>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: 10 }}>
                           XN {formatDateTime(r.confirmedAt)}
                         </Typography>
                       ) : null}

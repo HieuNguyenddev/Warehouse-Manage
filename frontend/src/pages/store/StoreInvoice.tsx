@@ -52,7 +52,7 @@ export function StoreInvoice() {
     <Box className="mx-auto max-w-3xl px-4 py-8">
       <Stack direction={{ xs: 'column', sm: 'row' }} className="mb-4 items-start justify-between gap-3">
         <Box>
-          <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 28 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 28 }}>
             Hóa đơn {invoice.code}
           </Typography>
           <Typography sx={{ color: '#5C7A68' }}>

@@ -113,7 +113,6 @@ export function StoreProductDetail() {
           </Typography>
           <Typography
             sx={{
-              fontFamily: '"Sora", sans-serif',
               fontWeight: 800,
               fontSize: { xs: 28, md: 34 },
               lineHeight: 1.15,
