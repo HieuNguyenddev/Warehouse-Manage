@@ -63,7 +63,7 @@ export function StoreCart() {
     return (
       <Box className="mx-auto max-w-xl px-4 py-16 text-center">
         <CheckCircleOutlineIcon sx={{ fontSize: 72, color: storeColors.forest }} />
-        <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 28, mt: 2 }}>
+        <Typography sx={{ fontWeight: 800, fontSize: 28, mt: 2 }}>
           Đặt hàng thành công
         </Typography>
         <Typography className="mt-2" sx={{ color: '#5C7A68' }}>
@@ -97,7 +97,7 @@ export function StoreCart() {
 
   return (
     <Box className="mx-auto max-w-6xl px-4 py-8">
-      <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 28 }}>
+      <Typography sx={{ fontWeight: 800, fontSize: 28 }}>
         Giỏ hàng
       </Typography>
       <Typography sx={{ color: '#5C7A68', mb: 3 }}>
@@ -176,7 +176,7 @@ export function StoreCart() {
             className="h-fit rounded-3xl bg-white p-4"
             sx={{ border: `1px solid ${storeColors.mist}`, position: 'sticky', top: 88 }}
           >
-            <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, mb: 2 }}>
+            <Typography sx={{ fontWeight: 800, mb: 2 }}>
               Thanh toán
             </Typography>
             <Stack spacing={1} className="mb-3">

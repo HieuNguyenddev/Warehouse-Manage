@@ -75,7 +75,7 @@ export function StoreProducts() {
     <Box className="mx-auto max-w-6xl px-4 py-8">
       <Stack direction={{ xs: 'column', md: 'row' }} className="mb-6 items-start justify-between gap-4">
         <Box>
-          <Typography sx={{ fontFamily: '"Sora", sans-serif', fontWeight: 800, fontSize: 28 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 28 }}>
             Siêu thị
           </Typography>
           <Typography sx={{ color: '#5C7A68' }}>Chọn hàng · thêm giỏ · thanh toán nhanh</Typography>
