@@ -48,16 +48,19 @@ public class ImportReceiptRequestDto : IValidatableObject
         if (Details.Count > 100)
             yield return new ValidationResult("Mỗi phiếu tối đa 100 dòng chi tiết.", [nameof(Details)]);
 
-        // Không cho trùng ProductId trong cùng phiếu
+        // Không cho trùng cùng thuốc + cùng số lô trên 1 phiếu (khác lô thì được)
         var duplicates = Details
-            .GroupBy(x => x.ProductId)
-            .Where(g => g.Key > 0 && g.Count() > 1)
-            .Select(g => g.Key)
+            .GroupBy(x => (
+                x.ProductId,
+                Lot: (x.LotNumber ?? string.Empty).Trim().ToUpperInvariant()))
+            .Where(g => g.Key.ProductId > 0 && g.Count() > 1)
+            .Select(g => g.Key.ProductId)
+            .Distinct()
             .ToList();
 
         if (duplicates.Count > 0)
             yield return new ValidationResult(
-                $"Sản phẩm bị trùng trên phiếu: {string.Join(", ", duplicates)}.",
+                $"Trùng thuốc + số lô trên phiếu (ProductId): {string.Join(", ", duplicates)}.",
                 [nameof(Details)]);
 
         if (Note is not null && (string.IsNullOrWhiteSpace(Note) || Note != Note.Trim()))

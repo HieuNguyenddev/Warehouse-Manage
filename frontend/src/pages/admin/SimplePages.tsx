@@ -180,12 +180,38 @@ export function WarehousesPage() {
         { key: 'id', header: 'ID' },
         { key: 'code', header: 'Mã' },
         { key: 'name', header: 'Tên kho' },
+        {
+          key: 'warehouseType',
+          header: 'Loại kho',
+          render: (r) => {
+            const map: Record<string, string> = {
+              General: 'Thường',
+              ColdChain: 'Lạnh',
+              Controlled: 'Gây nghiện',
+              Emergency: 'Cấp cứu',
+              MedicalSupply: 'Vật tư',
+            }
+            return map[r.warehouseType || ''] || r.warehouseType || '—'
+          },
+        },
         { key: 'managerName', header: 'Quản lý' },
         { key: 'phone', header: 'Phone' },
       ]}
       fields={[
         { name: 'code', label: 'Mã kho', required: true },
         { name: 'name', label: 'Tên kho', required: true },
+        {
+          name: 'warehouseType',
+          label: 'Loại kho',
+          type: 'select',
+          options: [
+            { value: 'General', label: 'Thường (General)' },
+            { value: 'ColdChain', label: 'Lạnh / chuỗi lạnh' },
+            { value: 'Controlled', label: 'Gây nghiện / hướng thần' },
+            { value: 'Emergency', label: 'Cấp cứu' },
+            { value: 'MedicalSupply', label: 'Vật tư y tế' },
+          ],
+        },
         { name: 'address', label: 'Địa chỉ', type: 'textarea' },
         { name: 'phone', label: 'Phone' },
         { name: 'managerName', label: 'Người quản lý' },

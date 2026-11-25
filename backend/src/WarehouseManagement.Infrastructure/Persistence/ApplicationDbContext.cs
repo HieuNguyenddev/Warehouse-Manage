@@ -23,6 +23,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<ProductImage> ProductImages => Set<ProductImage>();
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<WarehouseStock> WarehouseStocks => Set<WarehouseStock>();
+    public DbSet<StockLot> StockLots => Set<StockLot>();
     public DbSet<ImportReceipt> ImportReceipts => Set<ImportReceipt>();
     public DbSet<ImportReceiptDetail> ImportReceiptDetails => Set<ImportReceiptDetail>();
     public DbSet<ExportReceipt> ExportReceipts => Set<ExportReceipt>();
@@ -160,6 +161,20 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.MinStock).IsRequired(); // Ngưỡng tồn tối thiểu mặc định
             e.Property(x => x.IsActive).IsRequired();
 
+            // Thuộc tính dược BV
+            e.Property(x => x.RegistrationNumber).HasMaxLength(50);
+            e.Property(x => x.ActiveIngredient).HasMaxLength(200);
+            e.Property(x => x.Strength).HasMaxLength(100);
+            e.Property(x => x.DosageForm).HasMaxLength(100);
+            e.Property(x => x.Manufacturer).HasMaxLength(200);
+            e.Property(x => x.IsControlledSubstance).IsRequired();
+            e.Property(x => x.RequiresColdStorage).IsRequired();
+            e.Property(x => x.ExpiryAlertDays).IsRequired();
+
+            e.HasIndex(x => x.RegistrationNumber);
+            e.HasIndex(x => x.ActiveIngredient);
+            e.HasIndex(x => x.IsControlledSubstance);
+
             e.HasOne(x => x.Category)
                 .WithMany(x => x.Products)
                 .HasForeignKey(x => x.CategoryId)
@@ -205,6 +220,8 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ManagerName).HasMaxLength(100); // Tên quản lý kho
             e.Property(x => x.Note).HasMaxLength(255);
             e.Property(x => x.IsActive).IsRequired();
+            e.Property(x => x.WarehouseType).IsRequired();
+            e.HasIndex(x => x.WarehouseType);
         });
 
         // ===== Tồn kho theo kho + sản phẩm =====
@@ -261,6 +278,32 @@ public class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
+        // ===== Tồn theo lô / hạn dùng (FEFO) =====
+        modelBuilder.Entity<StockLot>(e =>
+        {
+            e.ToTable("StockLots");
+            e.HasKey(x => x.Id);
+
+            e.Property(x => x.LotNumber).IsRequired().HasMaxLength(50);
+            e.Property(x => x.Quantity).HasColumnType("decimal(18,2)");
+            e.Property(x => x.ExpiryDate);
+            e.Property(x => x.ManufactureDate);
+
+            // Cùng kho + thuốc + số lô → 1 dòng (cộng dồn khi nhập thêm cùng lô)
+            e.HasIndex(x => new { x.WarehouseId, x.ProductId, x.LotNumber }).IsUnique();
+            e.HasIndex(x => new { x.ExpiryDate, x.Quantity }); // Tra cứu cận hạn
+
+            e.HasOne(x => x.Warehouse)
+                .WithMany(x => x.Lots)
+                .HasForeignKey(x => x.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(x => x.Product)
+                .WithMany(x => x.Lots)
+                .HasForeignKey(x => x.ProductId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
         // ===== Chi tiết phiếu nhập =====
         modelBuilder.Entity<ImportReceiptDetail>(e =>
         {
@@ -268,12 +311,16 @@ public class ApplicationDbContext : DbContext
             e.HasKey(x => x.Id);
 
             e.Property(x => x.Quantity).HasColumnType("decimal(18,2)");
-            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
+            e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)"); // Giá nhập
+            e.Property(x => x.SalePrice).HasColumnType("decimal(18,2)"); // Giá bán → Product.Price
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)"); // Thành tiền dòng
+            e.Property(x => x.LotNumber).HasMaxLength(50);
+            e.Property(x => x.ExpiryDate);
+            e.Property(x => x.ManufactureDate);
             e.Property(x => x.Note).HasMaxLength(255);
 
-            // Một sản phẩm chỉ xuất hiện 1 lần trên cùng phiếu
-            e.HasIndex(x => new { x.ImportReceiptId, x.ProductId }).IsUnique();
+            // Cho phép cùng thuốc nhiều dòng nếu khác số lô (LotNumber null/'' gom một nhóm)
+            e.HasIndex(x => new { x.ImportReceiptId, x.ProductId, x.LotNumber });
 
             e.HasOne(x => x.ImportReceipt)
                 .WithMany(x => x.Details)
@@ -298,7 +345,9 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.ReceiptDate).IsRequired();
             e.Property(x => x.Status).IsRequired();
             e.Property(x => x.Source).IsRequired(); // Nguồn tạo phiếu (Admin / Store...)
+            e.Property(x => x.IssuePurpose).IsRequired();
             e.HasIndex(x => x.Source);
+            e.HasIndex(x => x.IssuePurpose);
             e.HasIndex(x => x.CreatedAt);
             e.Property(x => x.Note).HasMaxLength(255);
 
@@ -322,6 +371,8 @@ public class ApplicationDbContext : DbContext
             e.Property(x => x.Quantity).HasColumnType("decimal(18,2)");
             e.Property(x => x.UnitPrice).HasColumnType("decimal(18,2)");
             e.Property(x => x.LineTotal).HasColumnType("decimal(18,2)");
+            e.Property(x => x.LotNumber).HasMaxLength(50);
+            e.Property(x => x.LotAllocationsJson).HasMaxLength(2000);
             e.Property(x => x.Note).HasMaxLength(255);
 
             e.HasIndex(x => new { x.ExportReceiptId, x.ProductId }).IsUnique();

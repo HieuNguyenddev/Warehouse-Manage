@@ -181,7 +181,7 @@ export function StoreProducts() {
                   {p.sku} · {p.unitSymbol || 'sp'}
                 </Typography>
                 <Typography sx={{ fontWeight: 800, color: storeColors.coral, fontSize: 17, mt: 0.5 }}>
-                  {money(p.price)}
+                  {money(p.salePrice ?? p.price)}
                 </Typography>
                 <Button
                   fullWidth

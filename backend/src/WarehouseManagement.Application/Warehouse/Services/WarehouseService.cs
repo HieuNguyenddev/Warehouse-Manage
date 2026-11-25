@@ -53,7 +53,8 @@ public class WarehouseService : IWarehouseService
             Phone = dto.Phone?.Trim(),
             ManagerName = dto.ManagerName?.Trim(),
             Note = dto.Note?.Trim(),
-            IsActive = dto.IsActive
+            IsActive = dto.IsActive,
+            WarehouseType = dto.WarehouseType
         };
 
         await _warehouseRepository.AddAsync(warehouse);
@@ -81,6 +82,7 @@ public class WarehouseService : IWarehouseService
         warehouse.ManagerName = dto.ManagerName?.Trim();
         warehouse.Note = dto.Note?.Trim();
         warehouse.IsActive = dto.IsActive;
+        warehouse.WarehouseType = dto.WarehouseType;
         warehouse.UpdatedAt = DateTime.UtcNow;
 
         _warehouseRepository.Update(warehouse);
@@ -120,6 +122,7 @@ public class WarehouseService : IWarehouseService
         ManagerName = warehouse.ManagerName,
         Note = warehouse.Note,
         IsActive = warehouse.IsActive,
+        WarehouseType = warehouse.WarehouseType.ToString(),
         CreatedAt = warehouse.CreatedAt,
         UpdatedAt = warehouse.UpdatedAt
     };

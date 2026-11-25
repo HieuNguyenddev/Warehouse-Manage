@@ -12,7 +12,11 @@ public class Warehouse : BaseEntity
     public string? Note { get; set; } // Ghi chú nội bộ
     public bool IsActive { get; set; } = true; // false = kho ngưng hoạt động
 
+    /// <summary>Loại kho dược: thường / lạnh / gây nghiện / cấp cứu / VT.</summary>
+    public WarehouseType WarehouseType { get; set; } = WarehouseType.General;
+
     public ICollection<WarehouseStock> Stocks { get; set; } = []; // Tồn từng sản phẩm trong kho
+    public ICollection<StockLot> Lots { get; set; } = []; // Tồn theo lô / HSD
     public ICollection<ImportReceipt> ImportReceipts { get; set; } = []; // Phiếu nhập vào kho này
     public ICollection<ExportReceipt> ExportReceipts { get; set; } = []; // Phiếu xuất từ kho này
     public ICollection<Invoice> Invoices { get; set; } = []; // Hóa đơn gắn kho xuất

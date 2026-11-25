@@ -1,33 +1,55 @@
 namespace WarehouseManagement.Domain;
 
 /// <summary>
-/// SẢN PHẨM — hàng hóa trong kho.
-///
-/// Ghi nhớ cho sinh viên:
-/// - Đây là "khuôn dữ liệu" (entity), map với bảng Products trong SQL.
-/// - Số lượng tồn THỰC TẾ không nằm ở đây, mà nằm ở WarehouseStock (tồn theo từng kho).
-/// - Category / Unit chỉ là thông tin phân loại và đơn vị tính.
+/// THUỐC / VẬT TƯ Y TẾ trong kho dược bệnh viện.
+/// Tồn thực tế theo kho nằm ở WarehouseStock; tồn theo lô/HSD nằm ở StockLot.
 /// </summary>
 public class Product : BaseEntity
 {
     // --- Thông tin cơ bản ---
-    public string Sku { get; set; } = string.Empty;   // Mã hàng (unique), ví dụ: SP-001
-    public string Name { get; set; } = string.Empty;  // Tên hiển thị
-    public string? Description { get; set; }          // Mô tả (có thể null)
-    public decimal Price { get; set; }                // Giá bán mặc định
-    public int MinStock { get; set; }                 // Ngưỡng cảnh báo tồn thấp (toàn cục)
-    public bool IsActive { get; set; } = true;        // false = ngừng bán / không cho nhập-xuất mới
+    public string Sku { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Price { get; set; }
+    public int MinStock { get; set; }
+    public bool IsActive { get; set; } = true;
 
-    // --- Khóa ngoại (Foreign Key) ---
-    public int CategoryId { get; set; }               // Thuộc danh mục nào?
-    public Category? Category { get; set; }           // Navigation: object Category (EF tự join)
+    // --- Thuộc tính dược (kho nhà thuốc BV) ---
+    /// <summary>Số đăng ký thuốc (SĐK) / mã lưu hành.</summary>
+    public string? RegistrationNumber { get; set; }
 
-    public int UnitId { get; set; }                   // Đơn vị tính: cái, hộp, kg...
-    public Unit? Unit { get; set; }                   // Navigation: object Unit
+    /// <summary>Hoạt chất chính (INN / tên chung quốc tế).</summary>
+    public string? ActiveIngredient { get; set; }
 
-    // --- Quan hệ 1-n (một sản phẩm có nhiều...) ---
+    /// <summary>Hàm lượng / nồng độ (vd: 500mg, 5mg/ml).</summary>
+    public string? Strength { get; set; }
+
+    /// <summary>Dạng bào chế (viên nén, ống tiêm, dịch truyền…).</summary>
+    public string? DosageForm { get; set; }
+
+    /// <summary>Nhà sản xuất / công ty đăng ký.</summary>
+    public string? Manufacturer { get; set; }
+
+    /// <summary>Thuốc gây nghiện / hướng thần / kiểm soát đặc biệt.</summary>
+    public bool IsControlledSubstance { get; set; }
+
+    /// <summary>Yêu cầu bảo quản lạnh (chuỗi lạnh).</summary>
+    public bool RequiresColdStorage { get; set; }
+
+    /// <summary>Số ngày cảnh báo trước khi hết hạn (mặc định 90).</summary>
+    public int ExpiryAlertDays { get; set; } = 90;
+
+    // --- Khóa ngoại ---
+    public int CategoryId { get; set; }
+    public Category? Category { get; set; }
+
+    public int UnitId { get; set; }
+    public Unit? Unit { get; set; }
+
+    // --- Quan hệ 1-n ---
     public ICollection<ProductImage> Images { get; set; } = [];
     public ICollection<WarehouseStock> Stocks { get; set; } = [];
+    public ICollection<StockLot> Lots { get; set; } = [];
     public ICollection<ImportReceiptDetail> ImportDetails { get; set; } = [];
     public ICollection<ExportReceiptDetail> ExportDetails { get; set; } = [];
     public ICollection<StocktakeDetail> StocktakeDetails { get; set; } = [];

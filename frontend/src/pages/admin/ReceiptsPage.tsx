@@ -67,7 +67,18 @@ import {
 import type { ExportReceiptDto, ImportReceiptDto, ProductDto, WarehouseDto } from '../../types/api'
 
 type Kind = 'import' | 'export'
-type LineForm = { key: string; productId: number; quantity: number; unitPrice: number; note: string }
+type LineForm = {
+  key: string
+  productId: number
+  quantity: number
+  unitPrice: number
+  /** Giá bán (chỉ phiếu nhập) → cập nhật Product khi Confirm */
+  salePrice: number
+  note: string
+  lotNumber: string
+  expiryDate: string
+  manufactureDate: string
+}
 
 const STEPS_IMPORT = ['Thông tin & chi phí', 'Danh sách thuốc nhập', 'Xem lại & lưu nháp']
 const STEPS_EXPORT = ['Thông tin phiếu xuất', 'Danh sách thuốc xuất', 'Xem lại & lưu nháp']
@@ -145,15 +156,36 @@ function isStoreExport(r: ImportReceiptDto | ExportReceiptDto) {
   )
 }
 
+function salePriceOf(product?: ProductDto) {
+  if (!product) return 0
+  const v = Number(product.salePrice ?? product.price)
+  return Number.isFinite(v) ? v : 0
+}
+
 function newLine(product?: ProductDto): LineForm {
+  const sale = salePriceOf(product)
+  // Phiếu nhập: giá nhập mặc định ~70% giá bán; phiếu xuất: đơn giá = giá bán
+  const buy = sale > 0 ? Math.round(sale * 0.7) : 0
   return {
     key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     productId: product?.id || 0,
     quantity: 1,
-    unitPrice: product?.price || 0,
+    unitPrice: buy > 0 ? buy : sale,
+    salePrice: sale,
     note: '',
+    lotNumber: '',
+    expiryDate: '',
+    manufactureDate: '',
   }
 }
+
+const ISSUE_PURPOSE_OPTIONS = [
+  { value: 'DepartmentIssue', label: 'Lĩnh thuốc khoa/phòng' },
+  { value: 'PatientDispense', label: 'Cấp phát người bệnh' },
+  { value: 'InternalTransfer', label: 'Điều chuyển nội bộ' },
+  { value: 'Destruction', label: 'Tiêu hủy (hết hạn/hỏng)' },
+  { value: 'ReturnToSupplier', label: 'Trả nhà cung cấp' },
+]
 
 function buildReceiptPrintHtml(
   kind: Kind,
@@ -285,6 +317,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
     partnerId: 0,
     receiptDate: toDateTimeLocalValue(),
     note: '',
+    issuePurpose: 'DepartmentIssue',
   })
   const [costs, setCosts] = useState<ImportCosts>({
     shippingFee: 0,
@@ -440,6 +473,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
         partnerId: kind === 'import' ? (r as ImportReceiptDto).supplierId : (r as ExportReceiptDto).customerId,
         receiptDate: toDateTimeLocalValue(new Date(r.receiptDate)),
         note: r.note || '',
+        issuePurpose: (r as ExportReceiptDto).issuePurpose || 'DepartmentIssue',
       })
       if (kind === 'import') {
         const imp = r as ImportReceiptDto
@@ -455,7 +489,11 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
           productId: d.productId,
           quantity: d.quantity,
           unitPrice: d.unitPrice,
+          salePrice: Number(d.salePrice ?? d.unitPrice) || 0,
           note: d.note || '',
+          lotNumber: d.lotNumber || '',
+          expiryDate: d.expiryDate ? String(d.expiryDate).slice(0, 10) : '',
+          manufactureDate: d.manufactureDate ? String(d.manufactureDate).slice(0, 10) : '',
         })),
       )
       setOpen(true)
@@ -478,10 +516,19 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
   function validateLines() {
     if (!lines.length) return 'Cần ít nhất 1 dòng thuốc'
     if (lines.some((l) => !l.productId || l.quantity <= 0)) return 'Mỗi dòng cần thuốc và số lượng > 0'
-    const ids = lines.map((l) => l.productId)
-    if (new Set(ids).size !== ids.length) return 'Không được trùng thuốc trên cùng phiếu — gộp số lượng lại'
-    if (kind === 'import' && costs.tradeDiscount > lineTotal)
-      return 'Chiết khấu thương mại không được lớn hơn tổng giá mua hàng'
+    if (kind === 'import') {
+      // Cho phép cùng thuốc khác lô; chặn trùng thuốc + cùng số lô
+      const keys = lines.map(
+        (l) => `${l.productId}|${(l.lotNumber || '').trim().toUpperCase()}`,
+      )
+      if (new Set(keys).size !== keys.length)
+        return 'Trùng thuốc + số lô trên phiếu — mỗi lô một dòng hoặc gộp số lượng'
+      if (costs.tradeDiscount > lineTotal)
+        return 'Chiết khấu thương mại không được lớn hơn tổng giá mua hàng'
+    } else {
+      const ids = lines.map((l) => l.productId)
+      if (new Set(ids).size !== ids.length) return 'Không được trùng thuốc trên cùng phiếu xuất — gộp số lượng lại'
+    }
     return ''
   }
 
@@ -502,7 +549,11 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
         productId: l.productId,
         quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice),
+        ...(kind === 'import' ? { salePrice: Number(l.salePrice) || 0 } : {}),
         note: l.note || null,
+        lotNumber: l.lotNumber?.trim() || null,
+        expiryDate: kind === 'import' && l.expiryDate ? l.expiryDate : null,
+        manufactureDate: kind === 'import' && l.manufactureDate ? l.manufactureDate : null,
       }))
       const body =
         kind === 'import'
@@ -523,6 +574,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
               note: header.note || null,
               // 0 = Manual (số) — tương thích API; backend cũng ép Manual cho admin
               source: 0,
+              issuePurpose: header.issuePurpose || 'DepartmentIssue',
               details,
             }
 
@@ -609,7 +661,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
               : `linear-gradient(135deg, ${alpha('#1565C0', 0.06)}, ${alpha('#42A5F5', 0.1)})`,
         }}
       >
-        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'flex-start' }}>
           {kind === 'import' ? (
             <LocalShippingOutlinedIcon sx={{ color: '#0B6E4F', mt: 0.2 }} />
           ) : (
@@ -1025,7 +1077,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                       elevation={0}
                       sx={{ p: 2.25, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: '#fff' }}
                     >
-                      <Stack direction="row" spacing={1} alignItems="center" className="mb-2">
+                      <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
                         <WarehouseOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
                         <Typography sx={{ fontWeight: 800 }}>Thông tin chung</Typography>
                       </Stack>
@@ -1056,6 +1108,22 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                             </MenuItem>
                           ))}
                         </TextField>
+                        {kind === 'export' ? (
+                          <TextField
+                            select
+                            label="Mục đích xuất"
+                            size="small"
+                            value={header.issuePurpose}
+                            onChange={(e) => setHeader({ ...header, issuePurpose: e.target.value })}
+                            className="sm:col-span-2"
+                          >
+                            {ISSUE_PURPOSE_OPTIONS.map((o) => (
+                              <MenuItem key={o.value} value={o.value}>
+                                {o.label}
+                              </MenuItem>
+                            ))}
+                          </TextField>
+                        ) : null}
                         <TextField
                           label="Thời gian phiếu"
                           type="datetime-local"
@@ -1091,7 +1159,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                           bgcolor: alpha(accent, 0.04),
                         }}
                       >
-                        <Stack direction="row" spacing={1} alignItems="center" className="mb-2">
+                        <Stack direction="row" spacing={1} sx={{ mb: 2, alignItems: 'center' }}>
                           <LocalShippingOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
                           <Typography sx={{ fontWeight: 800 }}>Chi phí mua hàng</Typography>
                         </Stack>
@@ -1158,15 +1226,19 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                       </Button>
                     </Stack>
 
-                    <Stack spacing={1.25} sx={{ maxHeight: 380, overflowY: 'auto', pr: 0.5 }}>
+                    <Stack spacing={1.5} sx={{ maxHeight: 400, overflowY: 'auto', pr: 0.5 }}>
                       {lines.map((line, idx) => {
                         const lineAmt = (Number(line.quantity) || 0) * (Number(line.unitPrice) || 0)
+                        const fieldSx = {
+                          '& .MuiInputBase-root': { height: 40 },
+                          '& .MuiFormHelperText-root': { display: 'none' },
+                        }
                         return (
                           <Paper
                             key={line.key}
                             elevation={0}
                             sx={{
-                              p: 1.75,
+                              p: 2,
                               borderRadius: 2.5,
                               border: '1px solid',
                               borderColor: 'divider',
@@ -1180,17 +1252,25 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                           >
                             <Stack
                               direction="row"
-                              className="mb-1.5 items-center justify-between"
+                              spacing={1}
+                              sx={{ mb: 1.75, alignItems: 'center', justifyContent: 'space-between' }}
                             >
-                              <Chip
-                                size="small"
-                                label={`Dòng ${idx + 1}`}
-                                sx={{
-                                  fontWeight: 700,
-                                  bgcolor: alpha(accent, 0.1),
-                                  color: accent,
-                                }}
-                              />
+                              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                                <Chip
+                                  size="small"
+                                  label={`Dòng ${idx + 1}`}
+                                  sx={{
+                                    fontWeight: 700,
+                                    bgcolor: alpha(accent, 0.1),
+                                    color: accent,
+                                  }}
+                                />
+                                {kind === 'import' ? (
+                                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: 11 }}>
+                                    Giá bán → trang người dùng
+                                  </Typography>
+                                ) : null}
+                              </Stack>
                               <Tooltip title={lines.length <= 1 ? 'Cần ít nhất 1 dòng' : 'Xóa dòng'}>
                                 <span>
                                   <IconButton
@@ -1204,45 +1284,63 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                                 </span>
                               </Tooltip>
                             </Stack>
-                            <Box
-                              className="grid gap-2"
-                              sx={{
-                                gridTemplateColumns: {
-                                  xs: '1fr',
-                                  md: 'minmax(0,1.6fr) 110px 140px 120px',
-                                },
-                                alignItems: 'center',
+
+                            {/* Hàng 1: chọn thuốc full width */}
+                            <TextField
+                              select
+                              label="Thuốc / vật tư"
+                              size="small"
+                              fullWidth
+                              sx={{ ...fieldSx, mb: 1.5 }}
+                              value={line.productId}
+                              onChange={(e) => {
+                                const id = Number(e.target.value)
+                                const p = products.find((x) => x.id === id)
+                                const sale = salePriceOf(p)
+                                const buy = sale > 0 ? Math.round(sale * 0.7) : 0
+                                setLines((prev) =>
+                                  prev.map((l, i) =>
+                                    i === idx
+                                      ? {
+                                          ...l,
+                                          productId: id,
+                                          unitPrice: kind === 'import' ? (buy || sale) : sale,
+                                          salePrice: sale,
+                                        }
+                                      : l,
+                                  ),
+                                )
                               }}
                             >
-                              <TextField
-                                select
-                                label="Thuốc / vật tư"
-                                size="small"
-                                fullWidth
-                                value={line.productId}
-                                onChange={(e) => {
-                                  const id = Number(e.target.value)
-                                  const p = products.find((x) => x.id === id)
-                                  setLines((prev) =>
-                                    prev.map((l, i) =>
-                                      i === idx
-                                        ? { ...l, productId: id, unitPrice: p?.price || l.unitPrice }
-                                        : l,
-                                    ),
-                                  )
-                                }}
-                              >
-                                {products.map((p) => (
-                                  <MenuItem key={p.id} value={p.id}>
-                                    {p.sku} · {p.name}
-                                  </MenuItem>
-                                ))}
-                              </TextField>
+                              {products.map((p) => (
+                                <MenuItem key={p.id} value={p.id}>
+                                  {p.sku} · {p.name}
+                                </MenuItem>
+                              ))}
+                            </TextField>
+
+                            {/* Hàng 2: SL + giá + thành tiền — cùng chiều cao */}
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gap: 1.5,
+                                mb: 1.5,
+                                gridTemplateColumns: {
+                                  xs: '1fr 1fr',
+                                  sm:
+                                    kind === 'import'
+                                      ? '88px 1fr 1fr minmax(120px, 140px)'
+                                      : '100px 1fr minmax(120px, 140px)',
+                                },
+                                alignItems: 'end',
+                              }}
+                            >
                               <TextField
                                 label="SL"
                                 type="number"
                                 size="small"
                                 fullWidth
+                                sx={fieldSx}
                                 slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
                                 value={line.quantity}
                                 onChange={(e) =>
@@ -1254,10 +1352,11 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                                 }
                               />
                               <TextField
-                                label={kind === 'import' ? 'Giá mua' : 'Đơn giá'}
+                                label={kind === 'import' ? 'Giá nhập' : 'Đơn giá'}
                                 type="number"
                                 size="small"
                                 fullWidth
+                                sx={fieldSx}
                                 value={line.unitPrice}
                                 onChange={(e) =>
                                   setLines((prev) =>
@@ -1267,22 +1366,120 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                                   )
                                 }
                               />
+                              {kind === 'import' ? (
+                                <TextField
+                                  label="Giá bán"
+                                  type="number"
+                                  size="small"
+                                  fullWidth
+                                  sx={fieldSx}
+                                  value={line.salePrice}
+                                  onChange={(e) =>
+                                    setLines((prev) =>
+                                      prev.map((l, i) =>
+                                        i === idx ? { ...l, salePrice: Number(e.target.value) } : l,
+                                      ),
+                                    )
+                                  }
+                                />
+                              ) : null}
                               <Box
                                 sx={{
-                                  px: 1.25,
-                                  py: 1,
+                                  height: 40,
+                                  px: 1.5,
                                   borderRadius: 2,
                                   bgcolor: alpha(accent, 0.08),
-                                  textAlign: { xs: 'left', md: 'right' },
+                                  border: '1px solid',
+                                  borderColor: alpha(accent, 0.18),
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  justifyContent: 'center',
+                                  textAlign: 'right',
                                 }}
                               >
-                                <Typography variant="caption" color="text.secondary" display="block">
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ display: 'block', lineHeight: 1.1, fontSize: 10 }}
+                                >
                                   Thành tiền
                                 </Typography>
-                                <Typography sx={{ fontWeight: 800, color: accent, whiteSpace: 'nowrap' }}>
+                                <Typography
+                                  sx={{
+                                    fontWeight: 800,
+                                    color: accent,
+                                    whiteSpace: 'nowrap',
+                                    fontSize: 13.5,
+                                    lineHeight: 1.2,
+                                  }}
+                                >
                                   {money(lineAmt)}
                                 </Typography>
                               </Box>
+                            </Box>
+
+                            {/* Hàng 3: lô / HSD */}
+                            <Box
+                              sx={{
+                                display: 'grid',
+                                gap: 1.5,
+                                gridTemplateColumns: {
+                                  xs: '1fr',
+                                  sm: kind === 'import' ? '1fr 1fr 1fr' : '1fr',
+                                },
+                                alignItems: 'end',
+                              }}
+                            >
+                              <TextField
+                                label={kind === 'import' ? 'Số lô' : 'Số lô ưu tiên (FEFO nếu trống)'}
+                                size="small"
+                                fullWidth
+                                sx={fieldSx}
+                                value={line.lotNumber}
+                                onChange={(e) =>
+                                  setLines((prev) =>
+                                    prev.map((l, i) =>
+                                      i === idx ? { ...l, lotNumber: e.target.value } : l,
+                                    ),
+                                  )
+                                }
+                              />
+                              {kind === 'import' ? (
+                                <>
+                                  <TextField
+                                    label="Hạn dùng"
+                                    type="date"
+                                    size="small"
+                                    fullWidth
+                                    sx={fieldSx}
+                                    value={line.expiryDate}
+                                    onChange={(e) =>
+                                      setLines((prev) =>
+                                        prev.map((l, i) =>
+                                          i === idx ? { ...l, expiryDate: e.target.value } : l,
+                                        ),
+                                      )
+                                    }
+                                    slotProps={{ inputLabel: { shrink: true } }}
+                                  />
+                                  <TextField
+                                    label="Ngày SX"
+                                    type="date"
+                                    size="small"
+                                    fullWidth
+                                    sx={fieldSx}
+                                    value={line.manufactureDate}
+                                    onChange={(e) =>
+                                      setLines((prev) =>
+                                        prev.map((l, i) =>
+                                          i === idx ? { ...l, manufactureDate: e.target.value } : l,
+                                        ),
+                                      )
+                                    }
+                                    slotProps={{ inputLabel: { shrink: true } }}
+                                  />
+                                </>
+                              ) : null}
                             </Box>
                           </Paper>
                         )
@@ -1293,7 +1490,8 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                       elevation={0}
                       sx={{
                         mt: 2,
-                        p: 1.75,
+                        px: 2,
+                        py: 1.5,
                         borderRadius: 2.5,
                         background: `linear-gradient(135deg, ${alpha(accent, 0.12)}, ${alpha(accent, 0.04)})`,
                         border: '1px solid',
@@ -1303,19 +1501,29 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                       <Stack
                         direction={{ xs: 'column', sm: 'row' }}
                         spacing={1.5}
-                        justifyContent="space-between"
-                        alignItems={{ sm: 'center' }}
+                        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
                       >
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                          Tổng SL: <Box component="span" sx={{ color: accent }}>{qtyTotal}</Box>
+                        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.4 }}>
+                          Tổng SL:{' '}
+                          <Box component="span" sx={{ color: accent }}>
+                            {qtyTotal}
+                          </Box>
                           {' · '}
-                          {kind === 'import' ? 'Giá mua' : 'Giá trị'}:{' '}
-                          <Box component="span" sx={{ color: accent }}>{money(lineTotal)}</Box>
+                          {kind === 'import' ? 'Giá nhập' : 'Giá trị'}:{' '}
+                          <Box component="span" sx={{ color: accent }}>
+                            {money(lineTotal)}
+                          </Box>
                         </Typography>
                         {kind === 'import' ? (
                           <Chip
                             label={`Thanh toán ${money(payableTotal)}`}
-                            sx={{ fontWeight: 800, bgcolor: accent, color: '#fff' }}
+                            sx={{
+                              height: 32,
+                              fontWeight: 800,
+                              bgcolor: accent,
+                              color: '#fff',
+                              alignSelf: { xs: 'flex-start', sm: 'center' },
+                            }}
                           />
                         ) : null}
                       </Stack>
@@ -1329,7 +1537,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                       elevation={0}
                       sx={{ p: 2.25, borderRadius: 3, border: '1px solid', borderColor: 'divider', bgcolor: '#fff' }}
                     >
-                      <Stack direction="row" spacing={1} alignItems="center" className="mb-1.5">
+                      <Stack direction="row" spacing={1} sx={{ mb: 1.5, alignItems: 'center' }}>
                         <FactCheckOutlinedIcon sx={{ color: accent, fontSize: 20 }} />
                         <Typography sx={{ fontWeight: 800 }}>Kiểm tra trước khi lưu nháp</Typography>
                       </Stack>
@@ -1383,7 +1591,7 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                         >
                           <Box>
                             <Typography variant="caption" color="text.secondary">
-                              Giá mua
+                              Giá nhập (tổng)
                             </Typography>
                             <Typography sx={{ fontWeight: 700 }}>{money(lineTotal)}</Typography>
                           </Box>
@@ -1437,7 +1645,10 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                               <TableCell>SKU</TableCell>
                               <TableCell>Tên</TableCell>
                               <TableCell align="right">SL</TableCell>
-                              <TableCell align="right">Đơn giá</TableCell>
+                              <TableCell align="right">{kind === 'import' ? 'Giá nhập' : 'Đơn giá'}</TableCell>
+                              {kind === 'import' ? (
+                                <TableCell align="right">Giá bán</TableCell>
+                              ) : null}
                               <TableCell align="right">TT</TableCell>
                             </TableRow>
                           </TableHead>
@@ -1452,6 +1663,9 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                                   <TableCell sx={{ fontWeight: 600 }}>{p?.name}</TableCell>
                                   <TableCell align="right">{l.quantity}</TableCell>
                                   <TableCell align="right">{money(l.unitPrice)}</TableCell>
+                                  {kind === 'import' ? (
+                                    <TableCell align="right">{money(l.salePrice)}</TableCell>
+                                  ) : null}
                                   <TableCell align="right" sx={{ fontWeight: 700, color: accent }}>
                                     {money((Number(l.quantity) || 0) * (Number(l.unitPrice) || 0))}
                                   </TableCell>
@@ -1467,10 +1681,14 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                           Tổng {lines.length} dòng · SL {qtyTotal} ·{' '}
                           {kind === 'import' ? `Thanh toán ${money(payableTotal)}` : money(lineTotal)}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary" display="block" className="mt-0.5">
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: 'block', mt: 0.5 }}
+                        >
                           Sau khi lưu nháp: bấm <strong>Xác nhận</strong> trên danh sách để{' '}
                           {kind === 'import'
-                            ? 'cộng tồn kho và phát hành hóa đơn mua hàng (HDN)'
+                            ? 'cộng tồn kho, cập nhật giá bán (trang người dùng) và phát hành HĐ mua (HDN)'
                             : 'trừ tồn kho'}
                           .
                         </Typography>
@@ -1617,7 +1835,8 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                   <TableCell>Tên</TableCell>
                   <TableCell align="right">SL</TableCell>
                   <TableCell>ĐVT</TableCell>
-                  <TableCell align="right">{kind === 'import' ? 'Giá mua' : 'Đơn giá'}</TableCell>
+                  <TableCell align="right">{kind === 'import' ? 'Giá nhập' : 'Đơn giá'}</TableCell>
+                  {kind === 'import' ? <TableCell align="right">Giá bán</TableCell> : null}
                   <TableCell align="right">TT</TableCell>
                 </TableRow>
               </TableHead>
@@ -1629,6 +1848,9 @@ function ReceiptsPage({ kind }: { kind: Kind }) {
                     <TableCell align="right">{d.quantity}</TableCell>
                     <TableCell>{d.unitSymbol}</TableCell>
                     <TableCell align="right">{money(d.unitPrice)}</TableCell>
+                    {kind === 'import' ? (
+                      <TableCell align="right">{money(d.salePrice ?? 0)}</TableCell>
+                    ) : null}
                     <TableCell align="right">{money(d.lineTotal)}</TableCell>
                   </TableRow>
                 ))}

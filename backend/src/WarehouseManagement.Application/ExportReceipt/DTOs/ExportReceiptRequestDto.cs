@@ -20,6 +20,9 @@ public class ExportReceiptRequestDto : IValidatableObject
     // Nguồn phiếu: mặc định Manual; checkout store gửi Store
     public ExportReceiptSource Source { get; set; } = ExportReceiptSource.Manual;
 
+    /// <summary>Mục đích xuất kho dược.</summary>
+    public ExportIssuePurpose IssuePurpose { get; set; } = ExportIssuePurpose.DepartmentIssue;
+
     // Ghi chú phiếu
     [MaxLength(255, ErrorMessage = "Ghi chú tối đa 255 ký tự.")]
     public string? Note { get; set; }

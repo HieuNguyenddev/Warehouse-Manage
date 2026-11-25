@@ -13,9 +13,23 @@ public class ImportReceiptDetailRequestDto
     [Range(0.01, double.MaxValue, ErrorMessage = "Số lượng nhập phải > 0.")]
     public decimal Quantity { get; set; }
 
-    // Đơn giá nhập
-    [Range(0, double.MaxValue, ErrorMessage = "Đơn giá phải >= 0.")]
+    // Giá nhập (mua từ NCC)
+    [Range(0, double.MaxValue, ErrorMessage = "Giá nhập phải >= 0.")]
     public decimal UnitPrice { get; set; }
+
+    /// <summary>Giá bán (đẩy lên Product.Price khi Confirm — trang người dùng).</summary>
+    [Range(0, double.MaxValue, ErrorMessage = "Giá bán phải >= 0.")]
+    public decimal SalePrice { get; set; }
+
+    /// <summary>Số lô (khuyến nghị bắt buộc với thuốc có HSD).</summary>
+    [MaxLength(50, ErrorMessage = "Số lô tối đa 50 ký tự.")]
+    public string? LotNumber { get; set; }
+
+    /// <summary>Hạn dùng của lô.</summary>
+    public DateTime? ExpiryDate { get; set; }
+
+    /// <summary>Ngày sản xuất.</summary>
+    public DateTime? ManufactureDate { get; set; }
 
     // Ghi chú dòng
     [MaxLength(255, ErrorMessage = "Ghi chú dòng tối đa 255 ký tự.")]

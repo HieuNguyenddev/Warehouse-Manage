@@ -257,7 +257,7 @@ export function StoreHome() {
                   </Typography>
                   <Stack direction="row" className="mt-auto items-center justify-between gap-2">
                     <Typography sx={{ fontWeight: 800, color: storeColors.coral, fontSize: 16 }}>
-                      {money(p.price)}
+                      {money(p.salePrice ?? p.price)}
                     </Typography>
                     <Button
                       size="small"

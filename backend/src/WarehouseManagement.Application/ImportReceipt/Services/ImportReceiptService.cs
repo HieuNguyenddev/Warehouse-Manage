@@ -13,19 +13,22 @@ public class ImportReceiptService : IImportReceiptService
     private readonly ISupplierRepository _supplierRepo;
     private readonly IProductRepository _productRepo;
     private readonly IStockMovementService _movement;
+    private readonly IStockLotService _lots;
 
     public ImportReceiptService(
         IImportReceiptRepository repo,
         IWarehouseRepository warehouseRepo,
         ISupplierRepository supplierRepo,
         IProductRepository productRepo,
-        IStockMovementService movement)
+        IStockMovementService movement,
+        IStockLotService lots)
     {
         _repo = repo;
         _warehouseRepo = warehouseRepo;
         _supplierRepo = supplierRepo;
         _productRepo = productRepo;
         _movement = movement;
+        _lots = lots;
     }
 
     public async Task<ImportReceiptResponseDto> GetByIdAsync(int id)
@@ -129,6 +132,32 @@ public class ImportReceiptService : IImportReceiptService
                 receipt.Id,
                 receipt.Code,
                 $"Nhập kho {receipt.Code}");
+
+            // Cộng tồn theo lô / HSD (FEFO)
+            await _lots.AddFromImportAsync(
+                receipt.WarehouseId,
+                line.ProductId,
+                line.LotNumber ?? string.Empty,
+                line.ExpiryDate,
+                line.ManufactureDate,
+                line.Quantity,
+                line.Id);
+
+            // Đồng bộ giá bán → Product.Price (trang người dùng / checkout store / phiếu xuất)
+            var product = await _productRepo.GetByIdAsync(line.ProductId);
+            if (product is not null)
+            {
+                var sale = line.SalePrice > 0 ? line.SalePrice : product.Price;
+                sale = Math.Round(sale, 2);
+                if (line.SalePrice <= 0)
+                    line.SalePrice = sale; // ghi nhận trên phiếu nếu trước đó thiếu
+                if (product.Price != sale)
+                {
+                    product.Price = sale;
+                    product.UpdatedAt = DateTime.UtcNow;
+                    _productRepo.Update(product);
+                }
+            }
         }
 
         receipt.Status = ImportReceiptStatus.Confirmed;
@@ -166,6 +195,12 @@ public class ImportReceiptService : IImportReceiptService
                     receipt.Id,
                     receipt.Code,
                     $"Hủy nhập kho {receipt.Code}");
+
+                await _lots.DeductExactLotAsync(
+                    receipt.WarehouseId,
+                    line.ProductId,
+                    line.LotNumber ?? string.Empty,
+                    line.Quantity);
             }
         }
 
@@ -215,12 +250,24 @@ public class ImportReceiptService : IImportReceiptService
             if (!product.IsActive)
                 throw new ValidationException($"Sản phẩm {product.Sku} đang ngừng hoạt động.");
 
+            if (line.ExpiryDate.HasValue && line.ManufactureDate.HasValue
+                && line.ExpiryDate.Value.Date < line.ManufactureDate.Value.Date)
+                throw new ValidationException(
+                    $"ProductId {line.ProductId}: Hạn dùng không được trước ngày sản xuất.");
+
+            // SalePrice = 0 → giữ giá bán hiện tại của sản phẩm khi Confirm
+            var salePrice = line.SalePrice > 0 ? line.SalePrice : product.Price;
+
             result.Add(new ImportReceiptDetail
             {
                 ProductId = line.ProductId,
                 Quantity = line.Quantity,
                 UnitPrice = line.UnitPrice,
+                SalePrice = Math.Round(salePrice, 2),
                 LineTotal = Math.Round(line.Quantity * line.UnitPrice, 2),
+                LotNumber = string.IsNullOrWhiteSpace(line.LotNumber) ? null : line.LotNumber.Trim().ToUpperInvariant(),
+                ExpiryDate = line.ExpiryDate?.Date,
+                ManufactureDate = line.ManufactureDate?.Date,
                 Note = line.Note?.Trim()
             });
         }
@@ -284,7 +331,11 @@ public class ImportReceiptService : IImportReceiptService
                 UnitSymbol = d.Product?.Unit?.Symbol,
                 Quantity = d.Quantity,
                 UnitPrice = d.UnitPrice,
+                SalePrice = d.SalePrice,
                 LineTotal = d.LineTotal,
+                LotNumber = d.LotNumber,
+                ExpiryDate = d.ExpiryDate,
+                ManufactureDate = d.ManufactureDate,
                 Note = d.Note
             })
             .ToList();
