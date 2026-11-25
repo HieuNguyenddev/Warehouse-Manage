@@ -1,27 +1,26 @@
 import { useState, type FormEvent } from 'react'
-import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  Link,
-  Stack,
+  IconButton,
   TextField,
-  Typography,
 } from '@mui/material'
-import WarehouseIcon from '@mui/icons-material/Warehouse'
+import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
+import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import { AuthShell } from '../components/AuthShell'
 import { Alert } from '../components/ui'
 
 export function LoginAdmin() {
   const { loginAdmin, isAdmin } = useAuth()
   const nav = useNavigate()
-  const [username, setUsername] = useState('admin')
-  const [password, setPassword] = useState('123456')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   if (isAdmin) return <Navigate to="/admin" replace />
 
@@ -40,47 +39,48 @@ export function LoginAdmin() {
   }
 
   return (
-    <Box className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-100 via-blue-50 to-teal-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardContent className="p-6 sm:p-8">
-          <Stack spacing={2} className="mb-4 items-center">
-            <WarehouseIcon color="primary" sx={{ fontSize: 40 }} />
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              Kho Dược BV
-            </Typography>
-            <Typography variant="body2" color="text.secondary" align="center">
-              Đăng nhập quản trị / trưởng khoa / dược sĩ kho thuốc
-            </Typography>
-          </Stack>
-          {error ? <Alert>{error}</Alert> : null}
-          <Box component="form" onSubmit={onSubmit} className="space-y-3">
-            <TextField
-              label="Username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              fullWidth
-            />
-            <Button type="submit" fullWidth disabled={loading} size="large">
-              {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
-            </Button>
-          </Box>
-          <Typography variant="body2" color="text.secondary" align="center" className="mt-4">
-            Bạn là khách hàng?{' '}
-            <Link component={RouterLink} to="/store/login">
-              Đăng nhập Store
-            </Link>
-          </Typography>
-        </CardContent>
-      </Card>
-    </Box>
+    <AuthShell
+      portal="admin"
+      headline="Quản lý kho dược, bắt đầu tại đây."
+      description="Một không gian tập trung để nhân viên theo dõi hàng hóa và vận hành kho thuốc bệnh viện."
+      switchPrompt="Bạn là khách hàng?"
+      switchLabel="Vào cổng nhà thuốc"
+      switchTo="/store/login"
+    >
+      {error ? <Alert>{error}</Alert> : null}
+      <Box component="form" onSubmit={onSubmit} className="auth-form">
+        <TextField
+          label="Tên đăng nhập"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          autoComplete="username"
+          required
+          fullWidth
+        />
+        <div className="auth-password-field">
+          <TextField
+            label="Mật khẩu"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+            fullWidth
+          />
+          <IconButton
+            className="auth-password-toggle"
+            type="button"
+            aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+            onClick={() => setShowPassword((visible) => !visible)}
+            edge="end"
+          >
+            {showPassword ? <VisibilityOffRoundedIcon /> : <VisibilityRoundedIcon />}
+          </IconButton>
+        </div>
+        <Button type="submit" fullWidth disabled={loading} className="auth-submit" size="large">
+          {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+        </Button>
+      </Box>
+    </AuthShell>
   )
 }
