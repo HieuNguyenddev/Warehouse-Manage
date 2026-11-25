@@ -124,8 +124,11 @@ export function StoreProductDetail() {
           <Typography className="mt-2" sx={{ color: '#5C7A68' }}>
             Đơn vị: {product.unitName || product.unitSymbol || '—'}
           </Typography>
-          <Typography sx={{ mt: 2, fontWeight: 800, color: storeColors.coral, fontSize: 32 }}>
-            {money(product.price)}
+          <Typography sx={{ mt: 0.5, fontWeight: 600, color: '#5C7A68', fontSize: 13 }}>
+            Giá bán
+          </Typography>
+          <Typography sx={{ mt: 0.5, fontWeight: 800, color: storeColors.coral, fontSize: 32 }}>
+            {money(product.salePrice ?? product.price)}
           </Typography>
           <Typography className="mt-3" sx={{ lineHeight: 1.6, color: '#3D5A4A' }}>
             {product.description || 'Thuốc / vật tư từ kho dược bệnh viện, sẵn sàng cấp phát.'}

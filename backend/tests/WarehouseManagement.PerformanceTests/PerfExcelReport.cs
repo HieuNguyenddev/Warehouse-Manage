@@ -28,7 +28,6 @@ internal static class PerfExcelReport
     private static int _written;
 
     /// <summary>
-    /// Một dòng dữ liệu trên sheet Excel.
     /// </summary>
     /// <param name="ClassName">Tên class test (cột Class).</param>
     /// <param name="TestCase">Tên bước / scenario (cột TestCase).</param>

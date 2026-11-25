@@ -65,8 +65,8 @@ const groups: {
     title: 'Kho & tồn',
     items: [
       { to: '/admin/stocks', label: 'Tồn kho', icon: <LayersIcon fontSize="small" /> },
-      { to: '/admin/imports', label: 'Phiếu nhập', icon: <InputIcon fontSize="small" /> },
-      { to: '/admin/exports', label: 'Phiếu xuất', icon: <OutputIcon fontSize="small" /> },
+      { to: '/admin/imports', label: 'Phiếu nhập (lô/HSD)', icon: <InputIcon fontSize="small" /> },
+      { to: '/admin/exports', label: 'Phiếu xuất / lĩnh', icon: <OutputIcon fontSize="small" /> },
       { to: '/admin/stocktakes', label: 'Kiểm kho', icon: <FactCheckIcon fontSize="small" /> },
       { to: '/admin/transactions', label: 'Lịch sử tồn', icon: <HistoryIcon fontSize="small" /> },
     ],

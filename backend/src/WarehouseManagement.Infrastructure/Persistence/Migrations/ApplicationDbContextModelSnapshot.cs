@@ -154,6 +154,9 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<int>("IssuePurpose")
+                        .HasColumnType("int");
+
                     b.Property<string>("Note")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
@@ -182,6 +185,8 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("IssuePurpose");
+
                     b.HasIndex("Source");
 
                     b.HasIndex("WarehouseId");
@@ -205,6 +210,14 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("LotAllocationsJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Note")
                         .HasMaxLength(255)
@@ -313,11 +326,21 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ImportReceiptId")
                         .HasColumnType("int");
 
                     b.Property<decimal>("LineTotal")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ManufactureDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Note")
                         .HasMaxLength(255)
@@ -327,6 +350,9 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("SalePrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("UnitPrice")
@@ -339,8 +365,7 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.HasIndex("ImportReceiptId", "ProductId")
-                        .IsUnique();
+                    b.HasIndex("ImportReceiptId", "ProductId", "LotNumber");
 
                     b.ToTable("ImportReceiptDetails", (string)null);
                 });
@@ -544,6 +569,10 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("ActiveIngredient")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
@@ -554,8 +583,22 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
+                    b.Property<string>("DosageForm")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("ExpiryAlertDays")
+                        .HasColumnType("int");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<bool>("IsControlledSubstance")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Manufacturer")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("MinStock")
                         .HasColumnType("int");
@@ -568,10 +611,21 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("RegistrationNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("RequiresColdStorage")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Sku")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Strength")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("UnitId")
                         .HasColumnType("int");
@@ -581,7 +635,13 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ActiveIngredient");
+
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("IsControlledSubstance");
+
+                    b.HasIndex("RegistrationNumber");
 
                     b.HasIndex("Sku")
                         .IsUnique();
@@ -655,6 +715,55 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Roles", (string)null);
+                });
+
+            modelBuilder.Entity("WarehouseManagement.Domain.StockLot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ImportReceiptDetailId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LotNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("ManufactureDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WarehouseId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ExpiryDate", "Quantity");
+
+                    b.HasIndex("WarehouseId", "ProductId", "LotNumber")
+                        .IsUnique();
+
+                    b.ToTable("StockLots", (string)null);
                 });
 
             modelBuilder.Entity("WarehouseManagement.Domain.StockTransaction", b =>
@@ -1015,6 +1124,9 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("WarehouseType")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Code")
@@ -1022,6 +1134,8 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Name")
                         .IsUnique();
+
+                    b.HasIndex("WarehouseType");
 
                     b.ToTable("Warehouses", (string)null);
                 });
@@ -1224,6 +1338,25 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("WarehouseManagement.Domain.StockLot", b =>
+                {
+                    b.HasOne("WarehouseManagement.Domain.Product", "Product")
+                        .WithMany("Lots")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("WarehouseManagement.Domain.Warehouse", "Warehouse")
+                        .WithMany("Lots")
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Warehouse");
+                });
+
             modelBuilder.Entity("WarehouseManagement.Domain.StockTransaction", b =>
                 {
                     b.HasOne("WarehouseManagement.Domain.Product", "Product")
@@ -1340,6 +1473,8 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
 
                     b.Navigation("ImportDetails");
 
+                    b.Navigation("Lots");
+
                     b.Navigation("Stocks");
 
                     b.Navigation("StocktakeDetails");
@@ -1379,6 +1514,8 @@ namespace WarehouseManagement.Infrastructure.Persistence.Migrations
                     b.Navigation("ImportReceipts");
 
                     b.Navigation("Invoices");
+
+                    b.Navigation("Lots");
 
                     b.Navigation("Stocks");
 

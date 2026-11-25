@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Text.RegularExpressions;
+using WarehouseManagement.Domain;
 
 namespace WarehouseManagement.Application.DTOs;
 
@@ -42,6 +43,8 @@ public class WarehouseRequestDto : IValidatableObject
     // Trạng thái kích hoạt
     public bool IsActive { get; set; } = true;
 
+    /// <summary>Loại kho dược BV.</summary>
+    public WarehouseType WarehouseType { get; set; } = WarehouseType.General;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

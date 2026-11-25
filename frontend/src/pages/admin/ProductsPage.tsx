@@ -97,6 +97,14 @@ const empty = {
   categoryId: 0,
   unitId: 0,
   isActive: true,
+  registrationNumber: '',
+  activeIngredient: '',
+  strength: '',
+  dosageForm: '',
+  manufacturer: '',
+  isControlledSubstance: false,
+  requiresColdStorage: false,
+  expiryAlertDays: 90,
 }
 
 export function ProductsPage() {
@@ -161,6 +169,14 @@ export function ProductsPage() {
       categoryId: product.categoryId,
       unitId: product.unitId,
       isActive: product.isActive,
+      registrationNumber: product.registrationNumber || '',
+      activeIngredient: product.activeIngredient || '',
+      strength: product.strength || '',
+      dosageForm: product.dosageForm || '',
+      manufacturer: product.manufacturer || '',
+      isControlledSubstance: !!product.isControlledSubstance,
+      requiresColdStorage: !!product.requiresColdStorage,
+      expiryAlertDays: product.expiryAlertDays || 90,
     })
     setOpen(true)
   }
@@ -352,7 +368,7 @@ export function ProductsPage() {
                 <TableCell>Ảnh</TableCell>
                 <TableCell>SKU</TableCell>
                 <TableCell>Tên</TableCell>
-                <TableCell>Giá</TableCell>
+                <TableCell>Giá bán</TableCell>
                 <TableCell>Danh mục</TableCell>
                 <TableCell>ĐVT</TableCell>
                 <TableCell>TT</TableCell>
@@ -453,11 +469,12 @@ export function ProductsPage() {
                 size="small"
               />
               <TextField
-                label="Giá"
+                label="Giá bán"
                 type="number"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
                 size="small"
+                helperText="Hiển thị trên trang người dùng"
               />
               <TextField
                 label="Min stock"
@@ -500,6 +517,64 @@ export function ProductsPage() {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="sm:col-span-2"
                 size="small"
+              />
+              <TextField
+                label="Số đăng ký (SĐK)"
+                value={form.registrationNumber}
+                onChange={(e) => setForm({ ...form, registrationNumber: e.target.value })}
+                size="small"
+              />
+              <TextField
+                label="Hoạt chất"
+                value={form.activeIngredient}
+                onChange={(e) => setForm({ ...form, activeIngredient: e.target.value })}
+                size="small"
+              />
+              <TextField
+                label="Hàm lượng"
+                value={form.strength}
+                onChange={(e) => setForm({ ...form, strength: e.target.value })}
+                size="small"
+                placeholder="500mg"
+              />
+              <TextField
+                label="Dạng bào chế"
+                value={form.dosageForm}
+                onChange={(e) => setForm({ ...form, dosageForm: e.target.value })}
+                size="small"
+                placeholder="Viên nén"
+              />
+              <TextField
+                label="Nhà sản xuất"
+                value={form.manufacturer}
+                onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
+                size="small"
+                className="sm:col-span-2"
+              />
+              <TextField
+                label="Cảnh báo HSD (ngày)"
+                type="number"
+                value={form.expiryAlertDays}
+                onChange={(e) => setForm({ ...form, expiryAlertDays: Number(e.target.value) })}
+                size="small"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={form.isControlledSubstance}
+                    onChange={(e) => setForm({ ...form, isControlledSubstance: e.target.checked })}
+                  />
+                }
+                label="Thuốc kiểm soát đặc biệt"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={form.requiresColdStorage}
+                    onChange={(e) => setForm({ ...form, requiresColdStorage: e.target.checked })}
+                  />
+                }
+                label="Bảo quản lạnh"
               />
               <FormControlLabel
                 className="sm:col-span-2"
@@ -707,7 +782,15 @@ export function ProductsPage() {
               {[
                 ['SKU', viewing.sku],
                 ['Tên', viewing.name],
-                ['Giá', money(viewing.price)],
+                ['Giá bán', money(viewing.salePrice ?? viewing.price)],
+                ['SĐK', viewing.registrationNumber || '—'],
+                ['Hoạt chất', viewing.activeIngredient || '—'],
+                ['Hàm lượng', viewing.strength || '—'],
+                ['Dạng bào chế', viewing.dosageForm || '—'],
+                ['NSX', viewing.manufacturer || '—'],
+                ['Kiểm soát đặc biệt', viewing.isControlledSubstance ? 'Có' : 'Không'],
+                ['Bảo quản lạnh', viewing.requiresColdStorage ? 'Có' : 'Không'],
+                ['Cảnh báo HSD (ngày)', String(viewing.expiryAlertDays ?? 90)],
                 ['Min stock', viewing.minStock],
                 ['Danh mục', viewing.categoryName],
                 ['ĐVT', `${viewing.unitName || ''} (${viewing.unitSymbol || ''})`],

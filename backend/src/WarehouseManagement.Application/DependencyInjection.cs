@@ -23,6 +23,7 @@ public static class DependencyInjection
 
         // --- Tồn kho ---
         services.AddScoped<IWarehouseStockService, WarehouseStockService>();
+        services.AddScoped<IStockLotService, StockLotService>();
         services.AddScoped<IStockMovementService, StockMovementService>();
         services.AddScoped<IStockTransactionService, StockTransactionService>();
 

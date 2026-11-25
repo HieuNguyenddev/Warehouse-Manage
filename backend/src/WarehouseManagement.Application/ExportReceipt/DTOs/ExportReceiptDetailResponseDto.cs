@@ -27,6 +27,9 @@ public class ExportReceiptDetailResponseDto
     // Thành tiền dòng
     public decimal LineTotal { get; set; }
 
+    public string? LotNumber { get; set; }
+    public string? LotAllocationsJson { get; set; }
+
     // Ghi chú dòng
     public string? Note { get; set; }
 }

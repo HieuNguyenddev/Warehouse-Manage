@@ -33,6 +33,9 @@ public class ExportReceiptResponseDto
     // Nguồn phiếu (Manual / Store...)
     public string Source { get; set; } = "Manual";
 
+    /// <summary>Mục đích xuất (DepartmentIssue / PatientDispense / ...).</summary>
+    public string IssuePurpose { get; set; } = "DepartmentIssue";
+
     // Mã hóa đơn liên kết (nếu có)
     public string? InvoiceCode { get; set; }
 

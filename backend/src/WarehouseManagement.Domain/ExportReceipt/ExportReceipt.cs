@@ -18,6 +18,9 @@ public class ExportReceipt : BaseEntity
     // Manual = tạo tay admin; Store = đơn từ cổng nhà thuốc BV
     public ExportReceiptSource Source { get; set; } = ExportReceiptSource.Manual; // Nguồn tạo phiếu xuất
 
+    /// <summary>Mục đích xuất: lĩnh khoa / cấp BN / điều chuyển / hủy / trả NCC.</summary>
+    public ExportIssuePurpose IssuePurpose { get; set; } = ExportIssuePurpose.DepartmentIssue;
+
     public string? Note { get; set; } // Ghi chú phiếu xuất
 
     public DateTime? ConfirmedAt { get; set; } // Thời điểm xác nhận (trừ tồn)
