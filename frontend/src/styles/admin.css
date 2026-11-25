@@ -1,0 +1,305 @@
+.admin-layout {
+  min-height: 100vh;
+  display: flex;
+  background: #f5f7fb;
+  color: #172033;
+}
+
+.admin-sidebar {
+  height: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 2% 0%, rgba(59, 130, 246, 0.12), transparent 34%),
+    #101a2b;
+  color: #e5edf8;
+}
+
+.admin-sidebar__brand {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 21px;
+}
+
+.admin-sidebar__brand-mark {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(145deg, #347be7, #205ac0);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 13px;
+  box-shadow: 0 7px 18px rgba(37, 99, 235, 0.25);
+}
+
+.admin-sidebar__brand-mark .MuiSvgIcon-root {
+  font-size: 23px;
+}
+
+.admin-sidebar__brand-copy {
+  min-width: 0;
+}
+
+.admin-sidebar__brand-name.MuiTypography-root {
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.admin-sidebar__brand-caption.MuiTypography-root {
+  margin-top: 4px;
+  color: #8fa1ba;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.105em;
+  white-space: nowrap;
+}
+
+.admin-sidebar__divider.MuiDivider-root {
+  border-color: rgba(226, 232, 240, 0.09);
+}
+
+.admin-sidebar__navigation {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 13px 12px 16px;
+  scrollbar-color: rgba(148, 163, 184, 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.admin-sidebar__group + .admin-sidebar__group {
+  margin-top: 13px;
+}
+
+.admin-sidebar__group-title.MuiListSubheader-root {
+  position: static;
+  height: 29px;
+  padding: 0 10px;
+  color: #7e90aa;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  line-height: 29px;
+  text-transform: uppercase;
+}
+
+.admin-sidebar__link.MuiListItemButton-root {
+  color: #bdc9d9;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.admin-sidebar__link.MuiListItemButton-root:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.admin-sidebar__link.MuiListItemButton-root.active {
+  color: #fff;
+}
+
+.admin-sidebar__footer {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 9px;
+  padding: 0 12px max(12px, env(safe-area-inset-bottom));
+}
+
+.admin-sidebar__footer > .MuiDivider-root {
+  margin: 0 -12px 4px;
+}
+
+.admin-sidebar__user {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 4px;
+}
+
+.admin-sidebar__avatar.MuiAvatar-root {
+  width: 36px;
+  height: 36px;
+  color: #dbeafe;
+  background: #243d60;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.admin-sidebar__user-copy {
+  min-width: 0;
+}
+
+.admin-sidebar__user-name.MuiTypography-root {
+  overflow: hidden;
+  color: #eef4fc;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar__user-role.MuiTypography-root {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #8fa1ba;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar__logout.MuiButton-root,
+.admin-sidebar__theme-toggle.MuiButton-root {
+  min-height: 39px;
+  justify-content: flex-start;
+  padding: 0 11px;
+  border: 1px solid rgba(226, 232, 240, 0.11);
+  border-radius: 9px;
+  color: #bdc9d9;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-sidebar__logout.MuiButton-root:hover,
+.admin-sidebar__theme-toggle.MuiButton-root:hover {
+  border-color: rgba(226, 232, 240, 0.2);
+  color: #fff;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.admin-sidebar__logout.MuiButton-root .MuiButton-startIcon,
+.admin-sidebar__theme-toggle.MuiButton-root .MuiButton-startIcon {
+  color: #9fb0c6;
+}
+
+.admin-sidebar__theme-toggle.MuiButton-root {
+  position: relative;
+  min-height: 43px;
+  margin-top: 3px;
+  border-color: rgba(226, 232, 240, 0.15);
+  color: #f3f6fb;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.admin-sidebar__theme-indicator {
+  width: 29px;
+  height: 17px;
+  position: relative;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #52647a;
+  transition: background-color 160ms ease;
+}
+
+.admin-sidebar__theme-indicator::after {
+  width: 11px;
+  height: 11px;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  border-radius: 50%;
+  background: #fff;
+  content: '';
+  transition: transform 160ms ease;
+}
+
+.admin-sidebar__theme-indicator.dark {
+  background: #347be7;
+}
+
+.admin-sidebar__theme-indicator.dark::after {
+  transform: translateX(12px);
+}
+
+.admin-topbar__toolbar.MuiToolbar-root {
+  min-height: 70px;
+  gap: 12px;
+}
+
+.admin-topbar__title {
+  min-width: 0;
+  flex: 1;
+}
+
+.admin-topbar__title .MuiTypography-h6 {
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.admin-topbar__portal.MuiTypography-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid;
+  border-color: var(--mui-palette-divider, #e2e8f0);
+  border-radius: 999px;
+  color: #64748b;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.09em;
+  white-space: nowrap;
+}
+
+.admin-layout--dark {
+  background: #111827;
+  color: #e5e7eb;
+}
+
+.admin-layout--dark .bg-white {
+  background-color: #1b2533 !important;
+}
+
+.admin-layout--dark .bg-slate-50,
+.admin-layout--dark .bg-blue-50 {
+  background-color: #151f2d !important;
+}
+
+.admin-layout--dark .bg-slate-100 {
+  background-color: #202c3b !important;
+}
+
+.admin-layout--dark .text-slate-900,
+.admin-layout--dark .text-slate-800,
+.admin-layout--dark .text-slate-700 {
+  color: #e5e7eb !important;
+}
+
+.admin-layout--dark .text-slate-600,
+.admin-layout--dark .text-slate-500 {
+  color: #aab6c6 !important;
+}
+
+.admin-layout--dark .border-slate-200 {
+  border-color: #364253 !important;
+}
+
+@media (max-width: 599px) {
+  .admin-topbar__toolbar.MuiToolbar-root {
+    min-height: 64px;
+  }
+
+  .admin-topbar__title .MuiTypography-h6 {
+    font-size: 14px;
+  }
+
+  .admin-topbar__title .MuiTypography-caption {
+    display: none;
+  }
+
+  .admin-topbar__portal.MuiTypography-root {
+    display: none;
+  }
+}
