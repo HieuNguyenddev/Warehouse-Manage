@@ -89,6 +89,8 @@ export interface WarehouseDto {
   managerName?: string | null
   note?: string | null
   isActive: boolean
+  /** General | ColdChain | Controlled | Emergency | MedicalSupply */
+  warehouseType?: string | null
 }
 
 export interface ProductImageDto {
@@ -103,7 +105,10 @@ export interface ProductDto {
   sku: string
   name: string
   description?: string | null
+  /** Giá bán (đồng bộ từ phiếu nhập khi Confirm) */
   price: number
+  /** Alias giá bán — cùng giá trị với price */
+  salePrice?: number
   minStock: number
   isActive: boolean
   categoryId: number
@@ -112,6 +117,35 @@ export interface ProductDto {
   unitName?: string | null
   unitSymbol?: string | null
   images: ProductImageDto[]
+  registrationNumber?: string | null
+  activeIngredient?: string | null
+  strength?: string | null
+  dosageForm?: string | null
+  manufacturer?: string | null
+  isControlledSubstance?: boolean
+  requiresColdStorage?: boolean
+  expiryAlertDays?: number
+}
+
+export interface StockLotDto {
+  id: number
+  warehouseId: number
+  warehouseCode?: string | null
+  warehouseName?: string | null
+  productId: number
+  productSku?: string | null
+  productName?: string | null
+  unitSymbol?: string | null
+  lotNumber: string
+  expiryDate?: string | null
+  manufactureDate?: string | null
+  quantity: number
+  daysToExpiry?: number | null
+  isExpired: boolean
+  isNearExpiry: boolean
+  expiryAlertDays: number
+  isControlledSubstance: boolean
+  requiresColdStorage: boolean
 }
 
 export interface WarehouseStockDto {
@@ -154,8 +188,15 @@ export interface ReceiptDetailLine {
   productName?: string | null
   unitSymbol?: string | null
   quantity: number
+  /** Giá nhập (phiếu nhập) hoặc đơn giá xuất */
   unitPrice: number
+  /** Giá bán — khi Confirm nhập sẽ cập nhật Product.price (trang người dùng) */
+  salePrice?: number | null
   lineTotal: number
+  lotNumber?: string | null
+  expiryDate?: string | null
+  manufactureDate?: string | null
+  lotAllocationsJson?: string | null
   note?: string | null
 }
 
@@ -203,6 +244,8 @@ export interface ExportReceiptDto {
   customerName?: string | null
   status: string
   source?: string | null
+  /** DepartmentIssue | PatientDispense | InternalTransfer | Destruction | ReturnToSupplier */
+  issuePurpose?: string | null
   invoiceCode?: string | null
   note?: string | null
   totalAmount: number

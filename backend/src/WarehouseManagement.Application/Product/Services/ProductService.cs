@@ -87,14 +87,22 @@ public class ProductService : IProductService
         // Tạo entity Product mới từ DTO
         var product = new Product
         {
-            Sku = sku, // mã hàng đã chuẩn hóa
-            Name = dto.Name.Trim(), // tên sản phẩm
-            Description = dto.Description?.Trim(), // mô tả (có thể null)
-            Price = dto.Price, // giá bán
-            MinStock = dto.MinStock, // ngưỡng tồn tối thiểu
-            CategoryId = dto.CategoryId, // khóa ngoại danh mục
-            UnitId = dto.UnitId, // khóa ngoại đơn vị tính
-            IsActive = dto.IsActive // đang kinh doanh hay không
+            Sku = sku,
+            Name = dto.Name.Trim(),
+            Description = dto.Description?.Trim(),
+            Price = dto.Price,
+            MinStock = dto.MinStock,
+            CategoryId = dto.CategoryId,
+            UnitId = dto.UnitId,
+            IsActive = dto.IsActive,
+            RegistrationNumber = TrimOrNull(dto.RegistrationNumber),
+            ActiveIngredient = TrimOrNull(dto.ActiveIngredient),
+            Strength = TrimOrNull(dto.Strength),
+            DosageForm = TrimOrNull(dto.DosageForm),
+            Manufacturer = TrimOrNull(dto.Manufacturer),
+            IsControlledSubstance = dto.IsControlledSubstance,
+            RequiresColdStorage = dto.RequiresColdStorage,
+            ExpiryAlertDays = dto.ExpiryAlertDays > 0 ? dto.ExpiryAlertDays : 90
         };
 
         await _repo.AddAsync(product); // đưa entity vào DbContext (chưa ghi SQL)
@@ -113,15 +121,23 @@ public class ProductService : IProductService
         await EnsureUniqueSkuAsync(sku, excludeId: id); // cho phép giữ SKU cũ của chính nó
         await EnsureRefsAsync(dto.CategoryId, dto.UnitId); // kiểm tra FK còn hợp lệ
 
-        product.Sku = sku; // gán SKU mới
-        product.Name = dto.Name.Trim(); // gán tên mới
-        product.Description = dto.Description?.Trim(); // gán mô tả mới
-        product.Price = dto.Price; // gán giá mới
-        product.MinStock = dto.MinStock; // gán ngưỡng tồn mới
-        product.CategoryId = dto.CategoryId; // gán danh mục mới
-        product.UnitId = dto.UnitId; // gán đơn vị tính mới
-        product.IsActive = dto.IsActive; // gán trạng thái mới
-        product.UpdatedAt = DateTime.UtcNow; // đánh dấu thời điểm cập nhật (UTC)
+        product.Sku = sku;
+        product.Name = dto.Name.Trim();
+        product.Description = dto.Description?.Trim();
+        product.Price = dto.Price;
+        product.MinStock = dto.MinStock;
+        product.CategoryId = dto.CategoryId;
+        product.UnitId = dto.UnitId;
+        product.IsActive = dto.IsActive;
+        product.RegistrationNumber = TrimOrNull(dto.RegistrationNumber);
+        product.ActiveIngredient = TrimOrNull(dto.ActiveIngredient);
+        product.Strength = TrimOrNull(dto.Strength);
+        product.DosageForm = TrimOrNull(dto.DosageForm);
+        product.Manufacturer = TrimOrNull(dto.Manufacturer);
+        product.IsControlledSubstance = dto.IsControlledSubstance;
+        product.RequiresColdStorage = dto.RequiresColdStorage;
+        product.ExpiryAlertDays = dto.ExpiryAlertDays > 0 ? dto.ExpiryAlertDays : 90;
+        product.UpdatedAt = DateTime.UtcNow;
 
         _repo.Update(product); // đánh dấu entity đã thay đổi
         await _repo.SaveChangesAsync(); // lưu thay đổi xuống DB
@@ -331,33 +347,48 @@ public class ProductService : IProductService
         return product;
     }
 
+    private static string? TrimOrNull(string? v)
+    {
+        var s = v?.Trim();
+        return string.IsNullOrEmpty(s) ? null : s;
+    }
+
     // Đổi Entity Product → ProductResponseDto để trả ra API (tránh trả entity thô)
     private static ProductResponseDto Map(Product p) => new()
     {
-        Id = p.Id, // khóa chính
-        Sku = p.Sku, // mã hàng
-        Name = p.Name, // tên
-        Description = p.Description, // mô tả
-        Price = p.Price, // giá
-        MinStock = p.MinStock, // ngưỡng tồn
-        IsActive = p.IsActive, // trạng thái
-        CategoryId = p.CategoryId, // FK danh mục
-        CategoryName = p.Category?.Name, // tên danh mục (từ navigation, có thể null)
-        UnitId = p.UnitId, // FK đơn vị
-        UnitName = p.Unit?.Name, // tên đơn vị
-        UnitSymbol = p.Unit?.Symbol, // ký hiệu đơn vị (kg, hộp...)
+        Id = p.Id,
+        Sku = p.Sku,
+        Name = p.Name,
+        Description = p.Description,
+        Price = p.Price,
+        SalePrice = p.Price,
+        MinStock = p.MinStock,
+        IsActive = p.IsActive,
+        CategoryId = p.CategoryId,
+        CategoryName = p.Category?.Name,
+        UnitId = p.UnitId,
+        UnitName = p.Unit?.Name,
+        UnitSymbol = p.Unit?.Symbol,
+        RegistrationNumber = p.RegistrationNumber,
+        ActiveIngredient = p.ActiveIngredient,
+        Strength = p.Strength,
+        DosageForm = p.DosageForm,
+        Manufacturer = p.Manufacturer,
+        IsControlledSubstance = p.IsControlledSubstance,
+        RequiresColdStorage = p.RequiresColdStorage,
+        ExpiryAlertDays = p.ExpiryAlertDays,
         Images = p.Images
-            .OrderByDescending(x => x.IsPrimary) // ảnh chính lên trước
-            .ThenBy(x => x.SortOrder) // rồi theo thứ tự SortOrder
+            .OrderByDescending(x => x.IsPrimary)
+            .ThenBy(x => x.SortOrder)
             .Select(x => new ProductImageDto
             {
-                Id = x.Id, // id ảnh
-                ImageUrl = x.ImageUrl, // URL xem ảnh
-                SortOrder = x.SortOrder, // thứ tự
-                IsPrimary = x.IsPrimary // có phải ảnh chính không
+                Id = x.Id,
+                ImageUrl = x.ImageUrl,
+                SortOrder = x.SortOrder,
+                IsPrimary = x.IsPrimary
             })
             .ToList(),
-        CreatedAt = p.CreatedAt, // ngày tạo
-        UpdatedAt = p.UpdatedAt // ngày cập nhật gần nhất
+        CreatedAt = p.CreatedAt,
+        UpdatedAt = p.UpdatedAt
     };
 }

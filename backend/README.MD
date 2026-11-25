@@ -1,7 +1,8 @@
 # Warehouse Management API — Kho nhà thuốc bệnh viện
 
 Backend .NET (Clean Architecture) + JWT cho hệ thống **quản lý kho thuốc / vật tư y tế bệnh viện**:
-danh mục thuốc, tồn kho theo kho (thường, lạnh, gây nghiện…), nhập xuất, kiểm kê, nhà cung cấp dược, khoa/phòng nhận thuốc.
+danh mục thuốc (SĐK, hoạt chất, kiểm soát đặc biệt, chuỗi lạnh), tồn kho theo kho (thường / lạnh / gây nghiện / cấp cứu / VT),
+**tồn theo lô + hạn dùng (FEFO)**, nhập xuất lĩnh khoa / cấp BN / tiêu hủy, kiểm kê, NCC dược, cảnh báo cận hạn.
 
 **Mọi API quản trị phải có JWT.** Trên Swagger: **login chưa đủ** — còn phải bấm **Authorize**.
 

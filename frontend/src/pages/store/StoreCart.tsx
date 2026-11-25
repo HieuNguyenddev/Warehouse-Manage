@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -21,7 +21,11 @@ import { useToast } from '../../components/ToastContext'
 import { useAuth } from '../../auth/AuthContext'
 import { storeApi } from '../../api/endpoints'
 import { ApiError } from '../../api/client'
-import type { InvoiceDto } from '../../types/api'
+import type { InvoiceDto, ProductDto } from '../../types/api'
+
+function idsKey(ids: number[]) {
+  return [...ids].sort((a, b) => a - b).join(',')
+}
 
 export function StoreCart() {
   const cart = useCart()
@@ -31,6 +35,31 @@ export function StoreCart() {
   const [note, setNote] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState<InvoiceDto | null>(null)
+
+  // Đồng bộ giá bán trong giỏ theo catalog store (sau khi admin Confirm phiếu nhập đổi giá)
+  useEffect(() => {
+    if (!cart.items.length) return
+    const ids = cart.items.map((x) => x.productId)
+    void (async () => {
+      try {
+        const products: ProductDto[] = []
+        await Promise.all(
+          ids.map(async (id) => {
+            try {
+              products.push(await storeApi.product(id))
+            } catch {
+              /* SP có thể đã ngừng bán */
+            }
+          }),
+        )
+        if (products.length) cart.syncPrices(products)
+      } catch {
+        /* giữ giá cũ trong giỏ */
+      }
+    })()
+    // chỉ chạy lại khi đổi tập SP trong giỏ
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey(cart.items.map((x) => x.productId))])
 
   const shipping = cart.totalAmount >= 300000 ? 0 : 15000
   const grandTotal = cart.totalAmount + shipping

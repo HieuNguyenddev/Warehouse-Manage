@@ -17,6 +17,10 @@ public class ExportReceiptDetailRequestDto
     [Range(0, double.MaxValue, ErrorMessage = "Đơn giá phải >= 0.")]
     public decimal UnitPrice { get; set; }
 
+    /// <summary>Số lô ưu tiên (null = FEFO tự chọn).</summary>
+    [MaxLength(50)]
+    public string? LotNumber { get; set; }
+
     // Ghi chú dòng
     [MaxLength(255, ErrorMessage = "Ghi chú dòng tối đa 255 ký tự.")]
     public string? Note { get; set; }

@@ -21,11 +21,18 @@ public class ImportReceiptDetailResponseDto
     // Số lượng nhập
     public decimal Quantity { get; set; }
 
-    // Đơn giá nhập
+    // Giá nhập
     public decimal UnitPrice { get; set; }
 
-    // Thành tiền dòng
+    // Giá bán (cập nhật Product khi Confirm)
+    public decimal SalePrice { get; set; }
+
+    // Thành tiền dòng (theo giá nhập)
     public decimal LineTotal { get; set; }
+
+    public string? LotNumber { get; set; }
+    public DateTime? ExpiryDate { get; set; }
+    public DateTime? ManufactureDate { get; set; }
 
     // Ghi chú dòng
     public string? Note { get; set; }

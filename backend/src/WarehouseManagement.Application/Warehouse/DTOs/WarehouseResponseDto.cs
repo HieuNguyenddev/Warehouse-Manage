@@ -27,6 +27,9 @@ public class WarehouseResponseDto
     // Trạng thái kích hoạt
     public bool IsActive { get; set; }
 
+    /// <summary>Loại kho (General/ColdChain/Controlled/Emergency/MedicalSupply).</summary>
+    public string WarehouseType { get; set; } = "General";
+
     // Thời điểm tạo
     public DateTime CreatedAt { get; set; }
 

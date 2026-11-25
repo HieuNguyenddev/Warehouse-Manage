@@ -15,8 +15,11 @@ public class ProductResponseDto
     // Mô tả
     public string? Description { get; set; }
 
-    // Giá bán
+    /// <summary>Giá bán (đồng bộ từ phiếu nhập khi Confirm — hiển thị cổng người dùng).</summary>
     public decimal Price { get; set; }
+
+    /// <summary>Alias rõ nghĩa của Price — frontend store / admin có thể dùng salePrice.</summary>
+    public decimal SalePrice { get; set; }
 
     // Ngưỡng tồn tối thiểu mặc định
     public int MinStock { get; set; }
@@ -41,6 +44,16 @@ public class ProductResponseDto
 
     // Danh sách ảnh sản phẩm
     public List<ProductImageDto> Images { get; set; } = [];
+
+    // --- Thuộc tính dược BV ---
+    public string? RegistrationNumber { get; set; }
+    public string? ActiveIngredient { get; set; }
+    public string? Strength { get; set; }
+    public string? DosageForm { get; set; }
+    public string? Manufacturer { get; set; }
+    public bool IsControlledSubstance { get; set; }
+    public bool RequiresColdStorage { get; set; }
+    public int ExpiryAlertDays { get; set; }
 
     // Thời điểm tạo
     public DateTime CreatedAt { get; set; }

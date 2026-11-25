@@ -45,6 +45,28 @@ public class ProductRequestDto : IValidatableObject
     // Trạng thái kích hoạt
     public bool IsActive { get; set; } = true;
 
+    // --- Thuộc tính dược BV ---
+    [MaxLength(50)]
+    public string? RegistrationNumber { get; set; }
+
+    [MaxLength(200)]
+    public string? ActiveIngredient { get; set; }
+
+    [MaxLength(100)]
+    public string? Strength { get; set; }
+
+    [MaxLength(100)]
+    public string? DosageForm { get; set; }
+
+    [MaxLength(200)]
+    public string? Manufacturer { get; set; }
+
+    public bool IsControlledSubstance { get; set; }
+
+    public bool RequiresColdStorage { get; set; }
+
+    [Range(1, 730, ErrorMessage = "Số ngày cảnh báo HSD phải từ 1 đến 730.")]
+    public int ExpiryAlertDays { get; set; } = 90;
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {

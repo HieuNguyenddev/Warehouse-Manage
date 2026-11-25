@@ -109,8 +109,77 @@ public static class DataSeeder
         // (kể cả DB đã seed trước đó với dữ liệu siêu thị / thực phẩm).
         await RefreshPharmacyDomainLabelsAsync(db);
         await EnsureImportPurchaseCostsAndInvoicesAsync(db);
+        await EnsureImportSalePricesSyncedAsync(db);
         await EnsureStorefrontUniqueProductsAsync(db);
         await EnsureProductImagesReadyAsync(db, env.ContentRootPath);
+    }
+
+    /// <summary>
+    /// Đồng bộ giá bán:
+    /// 1) Backfill ImportReceiptDetails.SalePrice (= Product.Price) nếu đang = 0
+    /// 2) Cập nhật Product.Price theo giá bán mới nhất trên phiếu nhập đã Confirm
+    ///    → trang người dùng luôn thấy giá bán sau nhập hàng.
+    /// </summary>
+    private static async Task EnsureImportSalePricesSyncedAsync(ApplicationDbContext db)
+    {
+        // (1) Backfill SalePrice trên dòng nhập cũ
+        var orphanLines = await db.ImportReceiptDetails
+            .Include(x => x.Product)
+            .Where(x => x.SalePrice <= 0 && x.Product != null)
+            .ToListAsync();
+        foreach (var line in orphanLines)
+        {
+            // Giá bán mặc định = giá danh mục hiện tại (Product.Price)
+            line.SalePrice = Math.Round(line.Product!.Price, 2);
+            if (line.SalePrice <= 0 && line.UnitPrice > 0)
+                line.SalePrice = Math.Round(line.UnitPrice * 1.3m, 0); // fallback markup
+        }
+
+        if (orphanLines.Count > 0)
+            await db.SaveChangesAsync();
+
+        // Seed mới: luôn gắn SalePrice khi tạo dòng (xem vòng tạo PN-SEED bên dưới).
+        // (2) Product.Price ← SalePrice mới nhất từ phiếu nhập Confirmed
+        var latestSales = await db.ImportReceiptDetails
+            .AsNoTracking()
+            .Where(x => x.ImportReceipt != null
+                        && x.ImportReceipt.Status == ImportReceiptStatus.Confirmed
+                        && x.SalePrice > 0)
+            .Select(x => new
+            {
+                x.ProductId,
+                x.SalePrice,
+                ConfirmedAt = x.ImportReceipt!.ConfirmedAt ?? x.ImportReceipt.CreatedAt,
+                x.Id
+            })
+            .ToListAsync();
+
+        if (latestSales.Count == 0)
+            return;
+
+        var byProduct = latestSales
+            .GroupBy(x => x.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.OrderByDescending(x => x.ConfirmedAt).ThenByDescending(x => x.Id).First().SalePrice);
+
+        var productIds = byProduct.Keys.ToList();
+        var products = await db.Products.Where(x => productIds.Contains(x.Id)).ToListAsync();
+        var changed = false;
+        foreach (var p in products)
+        {
+            if (!byProduct.TryGetValue(p.Id, out var sale) || sale <= 0)
+                continue;
+            var rounded = Math.Round(sale, 2);
+            if (p.Price == rounded)
+                continue;
+            p.Price = rounded;
+            p.UpdatedAt = DateTime.UtcNow;
+            changed = true;
+        }
+
+        if (changed)
+            await db.SaveChangesAsync();
     }
 
     /// <summary>
@@ -283,12 +352,20 @@ public static class DataSeeder
                 5 => $"Kho khoa dược lâm sàng {city}",
                 _ => $"Kho dược {city} {code}"
             }, 150);
-            warehouses[i].Note = (n % 5) switch
+            warehouses[i].WarehouseType = (n % 5) switch
             {
-                0 => "Kho lạnh 2-8°C (vắc xin, insulin)",
-                1 => "Kho thuốc gây nghiện / hướng thần — kiểm soát đặc biệt",
-                2 => "Kho vật tư vô trùng",
-                3 => "Kho cấp cứu 24/7",
+                2 => WarehouseType.ColdChain,
+                3 => WarehouseType.Controlled,
+                4 => WarehouseType.MedicalSupply,
+                0 => WarehouseType.Emergency,
+                _ => WarehouseType.General
+            };
+            warehouses[i].Note = warehouses[i].WarehouseType switch
+            {
+                WarehouseType.ColdChain => "Kho lạnh 2-8°C (vắc xin, insulin, sinh phẩm)",
+                WarehouseType.Controlled => "Kho thuốc gây nghiện / hướng thần — kiểm soát đặc biệt",
+                WarehouseType.MedicalSupply => "Kho vật tư vô trùng / tiêu hao",
+                WarehouseType.Emergency => "Kho cấp cứu 24/7",
                 _ => "Kho thuốc thường — nhiệt độ phòng"
             };
         }
@@ -364,6 +441,7 @@ public static class DataSeeder
                 $"{item.Name} — thuốc/vật tư kho dược bệnh viện (SKU {product.Sku})", 1000);
             product.Price = item.Price;
             product.IsActive = true;
+            ApplyPharmacyAttrs(product, item.Name, idx);
 
             if (categories.Count > 0)
                 product.CategoryId = categories[item.CategoryIndex % categories.Count].Id;
@@ -443,7 +521,7 @@ public static class DataSeeder
             var catIdx = item.CategoryIndex % categories.Count;
             var unitIdx = (i - 1) % units.Count;
 
-            products.Add(new Product
+            var p = new Product
             {
                 Sku = sku,
                 Name = Clip(item.Name, 150),
@@ -453,7 +531,9 @@ public static class DataSeeder
                 CategoryId = categories[catIdx].Id,
                 UnitId = units[unitIdx].Id,
                 IsActive = true
-            });
+            };
+            ApplyPharmacyAttrs(p, item.Name, i - 1);
+            products.Add(p);
         }
 
         if (products.Count == 0)
@@ -1125,25 +1205,29 @@ public static class DataSeeder
                     if (details.Any(x => x.ProductId == p.Id))
                         continue;
                     var qty = 10 + ((i + d) % 40);
-                    var price = Math.Round(p.Price * 0.7m, 0);
+                    var buyPrice = Math.Round(p.Price * 0.7m, 0); // giá nhập
+                    var salePrice = Math.Round(p.Price, 0);        // giá bán (= trang người dùng)
                     details.Add(new ImportReceiptDetail
                     {
                         ProductId = p.Id,
                         Quantity = qty,
-                        UnitPrice = price,
-                        LineTotal = Math.Round(qty * price, 2),
+                        UnitPrice = buyPrice,
+                        SalePrice = salePrice,
+                        LineTotal = Math.Round(qty * buyPrice, 2),
                         Note = d == 0 ? "Dòng nhập chính" : null
                     });
                 }
 
                 if (details.Count == 0)
                 {
+                    var buy = Math.Round(p1.Price * 0.7m, 0);
                     details.Add(new ImportReceiptDetail
                     {
                         ProductId = p1.Id,
                         Quantity = 10,
-                        UnitPrice = Math.Round(p1.Price * 0.7m, 0),
-                        LineTotal = Math.Round(10 * p1.Price * 0.7m, 2)
+                        UnitPrice = buy,
+                        SalePrice = Math.Round(p1.Price, 0),
+                        LineTotal = Math.Round(10 * buy, 2)
                     });
                 }
 
@@ -1379,6 +1463,42 @@ public static class DataSeeder
     /// <summary>
     /// Ghép họ + tên đệm + tên từ seed số (ổn định, tái lập được).
     /// </summary>
+    /// <summary>
+    /// Gán thuộc tính dược BV (SĐK, hoạt chất, dạng bào chế, kiểm soát, lạnh…).
+    /// </summary>
+    private static void ApplyPharmacyAttrs(Product product, string drugName, int idx)
+    {
+        var forms = new[] { "Viên nén", "Viên nang", "Ống tiêm", "Lọ tiêm", "Gói bột", "Dịch truyền", "Kem bôi", "Siro" };
+        var makers = new[]
+        {
+            "DHG Pharma", "Traphaco", "Imexpharm", "Pymepharco", "Stada Việt Nam",
+            "Sanofi", "Pfizer", "GSK", "AstraZeneca", "Roche"
+        };
+        var controlledHints = new[]
+        {
+            "morphin", "pethidin", "fentanyl", "codein", "diazepam", "alprazolam",
+            "lorazepam", "clonazepam", "midazolam", "ketamin", "tramadol"
+        };
+        var coldHints = new[] { "insulin", "vắc", "vaccine", "albumin", "propofol", "octreotid" };
+
+        var lower = drugName.ToLowerInvariant();
+        product.RegistrationNumber = $"VD-{20000 + (idx % 8000)}-{25 + (idx % 5)}";
+        product.ActiveIngredient = Clip(drugName.Split('(')[0].Trim(), 200);
+        product.Strength = (idx % 5) switch
+        {
+            0 => "500mg",
+            1 => "250mg",
+            2 => "5mg/ml",
+            3 => "10mg",
+            _ => "1g"
+        };
+        product.DosageForm = forms[idx % forms.Length];
+        product.Manufacturer = makers[idx % makers.Length];
+        product.IsControlledSubstance = controlledHints.Any(h => lower.Contains(h));
+        product.RequiresColdStorage = coldHints.Any(h => lower.Contains(h));
+        product.ExpiryAlertDays = product.RequiresColdStorage ? 60 : 90;
+    }
+
     private static string Clip(string value, int maxLen)
         => string.IsNullOrEmpty(value) || value.Length <= maxLen ? value : value[..maxLen];
 

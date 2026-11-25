@@ -13,19 +13,22 @@ public class ExportReceiptService : IExportReceiptService
     private readonly ICustomerRepository _customerRepo;
     private readonly IProductRepository _productRepo;
     private readonly IStockMovementService _movement;
+    private readonly IStockLotService _lots;
 
     public ExportReceiptService(
         IExportReceiptRepository repo,
         IWarehouseRepository warehouseRepo,
         ICustomerRepository customerRepo,
         IProductRepository productRepo,
-        IStockMovementService movement)
+        IStockMovementService movement,
+        IStockLotService lots)
     {
         _repo = repo;
         _warehouseRepo = warehouseRepo;
         _customerRepo = customerRepo;
         _productRepo = productRepo;
         _movement = movement;
+        _lots = lots;
     }
 
     public async Task<ExportReceiptResponseDto> GetByIdAsync(int id)
@@ -72,6 +75,7 @@ public class ExportReceiptService : IExportReceiptService
             Source = dto.Source == ExportReceiptSource.Store
                 ? ExportReceiptSource.Store
                 : ExportReceiptSource.Manual,
+            IssuePurpose = dto.IssuePurpose,
             Details = details
         };
 
@@ -96,6 +100,7 @@ public class ExportReceiptService : IExportReceiptService
         receipt.CustomerId = dto.CustomerId;
         receipt.ReceiptDate = dto.ReceiptDate?.ToUniversalTime() ?? receipt.ReceiptDate;
         receipt.Note = dto.Note?.Trim();
+        receipt.IssuePurpose = dto.IssuePurpose;
         receipt.UpdatedAt = DateTime.UtcNow;
         receipt.Details = details;
 
@@ -116,15 +121,28 @@ public class ExportReceiptService : IExportReceiptService
 
         foreach (var line in receipt.Details)
         {
+            // Trừ tồn tổng
             await _movement.ApplyDeltaAsync(
                 receipt.WarehouseId,
                 line.ProductId,
                 -line.Quantity,
-                StockTransactionType.Export,
+                receipt.IssuePurpose == ExportIssuePurpose.Destruction
+                    ? StockTransactionType.Manual
+                    : StockTransactionType.Export,
                 StockReferenceTypes.ExportReceipt,
                 receipt.Id,
                 receipt.Code,
-                $"Xuất kho {receipt.Code}");
+                $"{PurposeLabel(receipt.IssuePurpose)} {receipt.Code}");
+
+            // Trừ tồn lô FEFO (hoặc đúng lô nếu chỉ định) + lưu phân bổ để hủy xuất
+            var allocJson = await _lots.DeductForExportAsync(
+                receipt.WarehouseId,
+                line.ProductId,
+                line.Quantity,
+                line.LotNumber);
+            line.LotAllocationsJson = allocJson;
+            if (string.IsNullOrWhiteSpace(line.LotNumber))
+                line.LotNumber = FirstLotFromAlloc(allocJson);
         }
 
         receipt.Status = ExportReceiptStatus.Confirmed;
@@ -160,6 +178,11 @@ public class ExportReceiptService : IExportReceiptService
                     receipt.Id,
                     receipt.Code,
                     $"Hủy xuất kho {receipt.Code}");
+
+                await _lots.RestoreFromAllocationsAsync(
+                    receipt.WarehouseId,
+                    line.ProductId,
+                    line.LotAllocationsJson);
             }
         }
 
@@ -209,17 +232,46 @@ public class ExportReceiptService : IExportReceiptService
             if (!product.IsActive)
                 throw new ValidationException($"Sản phẩm {product.Sku} đang ngừng hoạt động.");
 
+            // UnitPrice trống/0 → lấy giá bán hiện tại trên Product (sau nhập hàng)
+            var unitPrice = line.UnitPrice > 0 ? line.UnitPrice : product.Price;
+
             result.Add(new ExportReceiptDetail
             {
                 ProductId = line.ProductId,
                 Quantity = line.Quantity,
-                UnitPrice = line.UnitPrice,
-                LineTotal = Math.Round(line.Quantity * line.UnitPrice, 2),
+                UnitPrice = unitPrice,
+                LineTotal = Math.Round(line.Quantity * unitPrice, 2),
+                LotNumber = string.IsNullOrWhiteSpace(line.LotNumber)
+                    ? null
+                    : line.LotNumber.Trim().ToUpperInvariant(),
                 Note = line.Note?.Trim()
             });
         }
 
         return result;
+    }
+
+    private static string PurposeLabel(ExportIssuePurpose p) => p switch
+    {
+        ExportIssuePurpose.PatientDispense => "Cấp phát BN",
+        ExportIssuePurpose.InternalTransfer => "Điều chuyển",
+        ExportIssuePurpose.Destruction => "Tiêu hủy",
+        ExportIssuePurpose.ReturnToSupplier => "Trả NCC",
+        _ => "Lĩnh khoa"
+    };
+
+    private static string? FirstLotFromAlloc(string json)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array
+                && doc.RootElement.GetArrayLength() > 0
+                && doc.RootElement[0].TryGetProperty("lot", out var lot))
+                return lot.GetString();
+        }
+        catch { /* ignore */ }
+        return null;
     }
 
     private async Task<string> GenerateCodeAsync()
@@ -261,6 +313,8 @@ public class ExportReceiptService : IExportReceiptService
                 Quantity = d.Quantity,
                 UnitPrice = d.UnitPrice,
                 LineTotal = d.LineTotal,
+                LotNumber = d.LotNumber,
+                LotAllocationsJson = d.LotAllocationsJson,
                 Note = d.Note
             })
             .ToList();
@@ -276,6 +330,9 @@ public class ExportReceiptService : IExportReceiptService
             CustomerId = r.CustomerId,
             CustomerName = r.Customer?.Name,
             Status = r.Status.ToString(),
+            Source = r.Source.ToString(),
+            IssuePurpose = r.IssuePurpose.ToString(),
+            InvoiceCode = r.Invoice?.Code,
             Note = r.Note,
             TotalAmount = details.Sum(x => x.LineTotal),
             TotalQuantity = details.Sum(x => x.Quantity),

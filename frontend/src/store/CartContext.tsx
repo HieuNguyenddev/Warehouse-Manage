@@ -12,6 +12,7 @@ export type CartItem = {
   productId: number
   sku: string
   name: string
+  /** Giá bán hiện tại (đồng bộ từ Product.price / phiếu nhập) */
   price: number
   unitSymbol?: string | null
   imageUrl?: string | null
@@ -26,6 +27,8 @@ type CartContextValue = {
   setQty: (productId: number, quantity: number) => void
   removeItem: (productId: number) => void
   clear: () => void
+  /** Làm mới giá bán trong giỏ theo catalog API (sau khi admin nhập hàng đổi giá). */
+  syncPrices: (products: ProductDto[]) => void
 }
 
 const STORAGE_KEY = 'wm_store_cart'
@@ -47,6 +50,11 @@ function productImage(product: ProductDto) {
   return img?.imageUrl || null
 }
 
+function saleOf(product: ProductDto) {
+  const v = Number(product.salePrice ?? product.price)
+  return Number.isFinite(v) ? v : 0
+}
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => loadCart())
 
@@ -64,11 +72,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
       totalAmount,
       addItem: (product, qty = 1) => {
         const add = Math.max(1, Math.floor(qty))
+        const price = saleOf(product)
         setItems((prev) => {
           const found = prev.find((x) => x.productId === product.id)
           if (found) {
             return prev.map((x) =>
-              x.productId === product.id ? { ...x, quantity: x.quantity + add } : x,
+              x.productId === product.id
+                ? {
+                    ...x,
+                    quantity: x.quantity + add,
+                    price,
+                    name: product.name,
+                    sku: product.sku,
+                    unitSymbol: product.unitSymbol,
+                    imageUrl: productImage(product) || x.imageUrl,
+                  }
+                : x,
             )
           }
           return [
@@ -77,7 +96,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
               productId: product.id,
               sku: product.sku,
               name: product.name,
-              price: product.price,
+              price,
               unitSymbol: product.unitSymbol,
               imageUrl: productImage(product),
               quantity: add,
@@ -94,6 +113,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       },
       removeItem: (productId) => setItems((prev) => prev.filter((x) => x.productId !== productId)),
       clear: () => setItems([]),
+      syncPrices: (products) => {
+        if (!products.length) return
+        const map = new Map(products.map((p) => [p.id, p]))
+        setItems((prev) =>
+          prev.map((item) => {
+            const p = map.get(item.productId)
+            if (!p) return item
+            const price = saleOf(p)
+            if (price === item.price && p.name === item.name) return item
+            return {
+              ...item,
+              price,
+              name: p.name,
+              sku: p.sku,
+              unitSymbol: p.unitSymbol,
+              imageUrl: productImage(p) || item.imageUrl,
+            }
+          }),
+        )
+      },
     }
   }, [items])
 
