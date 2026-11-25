@@ -1,8 +1,10 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { CssBaseline, ThemeProvider } from '@mui/material'
+import { useMemo } from 'react'
 import { AuthProvider } from './auth/AuthContext'
 import { ToastProvider } from './components/ToastContext'
-import { theme } from './theme'
+import { AppearanceProvider, useAppearance } from './components/AppearanceContext'
+import { createAppTheme } from './theme'
 import { AdminLayout } from './layouts/AdminLayout'
 import { CustomerLayout } from './layouts/CustomerLayout'
 import { LoginAdmin } from './pages/LoginAdmin'
@@ -34,6 +36,17 @@ import { RequireAdmin, RequireCustomer } from './routes/Protected'
 import { CartProvider } from './store/CartContext'
 
 export default function App() {
+  return (
+    <AppearanceProvider>
+      <AppWithAppearance />
+    </AppearanceProvider>
+  )
+}
+
+function AppWithAppearance() {
+  const { mode } = useAppearance()
+  const theme = useMemo(() => createAppTheme(mode), [mode])
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

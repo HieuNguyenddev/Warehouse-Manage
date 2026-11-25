@@ -188,7 +188,7 @@ export function Modal({
       <DialogContent
         dividers
         sx={{
-          bgcolor: '#F7F9FC',
+          bgcolor: 'background.default',
           overflowY: 'auto',
           overflowX: 'hidden',
           flex: '1 1 auto',
@@ -206,7 +206,7 @@ export function Modal({
             flexShrink: 0,
             gap: 1,
             flexWrap: 'wrap',
-            bgcolor: '#fff',
+            bgcolor: 'background.paper',
             borderTop: '1px solid',
             borderColor: 'divider',
           }}
